@@ -6,7 +6,7 @@ import {
 import AddNewModelForm from './AddNewModelForm.jsx'
 import * as api from '../lib/api/baskaroApi.js'
 
-export default function BrandModelsView({ category, brand, onBack }) {
+export default function BrandModelsView({ category, brand, device, onBack }) {
   const [activeTab, setActiveTab] = useState('Models'); // 'Models' | 'Add'
   const [editingModel, setEditingModel] = useState(null);
   
@@ -16,7 +16,7 @@ export default function BrandModelsView({ category, brand, onBack }) {
   const loadModels = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.getMobileModels({ brandId: brand.id, limit: 100 });
+      const res = await api.getMobileModels({ brandId: brand.id, deviceId: device?.id || '', limit: 100 });
       const mItems = res?.items || (Array.isArray(res) ? res : []); 
       setModels(mItems);
     } catch (err) {
@@ -24,7 +24,7 @@ export default function BrandModelsView({ category, brand, onBack }) {
     } finally {
       setLoading(false);
     }
-  }, [brand.id]);
+  }, [brand.id, device?.id]);
 
   React.useEffect(() => {
     loadModels();
@@ -48,10 +48,49 @@ export default function BrandModelsView({ category, brand, onBack }) {
 
   const handleSave = async (data) => {
     try {
+      const { offersDraft, ...modelBody } = data || {}
       if (editingModel) {
-        await api.patchMobileModel(editingModel.id, data);
+        const modelId = editingModel.id || editingModel._id
+        const updated = await api.patchMobileModel(modelId, modelBody)
+        const id = updated?._id || updated?.id || modelId
+
+        if (Array.isArray(offersDraft)) {
+          await Promise.all(
+            offersDraft.map(async (o) => {
+              const title = String(o?.title || '').trim()
+              const desc = String(o?.desc || '').trim()
+              const code = String(o?.code || '').trim()
+              const sortOrder = Number(o?.sortOrder) || 0
+              const isActive = o?.isActive !== false
+
+              if (o?._deleted) {
+                if (o?._id) await api.deleteOffer(o._id)
+                return
+              }
+              if (!title || !desc) return
+
+              const body = { title, desc, code, sortOrder, isActive, modelId: id }
+              if (o?._id) await api.patchOffer(o._id, body)
+              else await api.postOffer(body)
+            }),
+          )
+        }
       } else {
-        await api.postMobileModel({ ...data, brandId: brand.id });
+        const created = await api.postMobileModel(modelBody)
+        const id = created?._id || created?.id
+        if (id && Array.isArray(offersDraft)) {
+          await Promise.all(
+            offersDraft.map(async (o) => {
+              const title = String(o?.title || '').trim()
+              const desc = String(o?.desc || '').trim()
+              const code = String(o?.code || '').trim()
+              const sortOrder = Number(o?.sortOrder) || 0
+              const isActive = o?.isActive !== false
+              if (!title || !desc) return
+              await api.postOffer({ title, desc, code, sortOrder, isActive, modelId: id })
+            }),
+          )
+        }
       }
       loadModels();
       setActiveTab('Models');
@@ -68,16 +107,17 @@ export default function BrandModelsView({ category, brand, onBack }) {
              <ChevronLeft size={20} />
           </button>
           <div className="flex items-baseline gap-2">
-             <h2 className="text-2xl font-black text-slate-900">{brand.name}</h2>
-             <span className="text-sm font-bold text-slate-400">/ {category.name} Models</span>
+             <h2 className="text-2xl font-black text-slate-900">{device?.name || brand.name}</h2>
+             <span className="text-sm font-bold text-slate-400">/ {brand.name} • {category.name} Models</span>
           </div>
        </div>
 
        {activeTab === 'Add' ? (
           <AddNewModelForm 
             onCancel={() => { setActiveTab('Models'); setEditingModel(null); }} 
-            initialBrand={brand.name} 
-            initialCategory={category.name} 
+            category={category}
+            brand={brand}
+            device={device}
             editingModel={editingModel}
             onSave={handleSave}
           />

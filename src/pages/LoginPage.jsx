@@ -418,6 +418,7 @@ function EmailFlow({ onSuccess }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -427,6 +428,10 @@ function EmailFlow({ onSuccess }) {
     if (!email.includes('@')) { setError('Enter a valid email address.'); return }
     if (mode !== 'forgot' && password.length < 6) { setError('Password must be at least 6 characters.'); return }
     if (mode === 'register' && !name.trim()) { setError('Please enter your name.'); return }
+    if (mode === 'register') {
+      const digits = phone.replace(/\D/g, '')
+      if (digits.length !== 10) { setError('Enter a valid 10-digit phone number.'); return }
+    }
     if (mode === 'forgot') {
       setLoading(true)
       setTimeout(() => { setLoading(false); setMode('success') }, 600)
@@ -435,7 +440,7 @@ function EmailFlow({ onSuccess }) {
     setLoading(true)
     try {
       if (mode === 'register') {
-        const res = await api.registerEmail({ name, email, phone: '', password })
+        const res = await api.registerEmail({ name, email, phone: phone.replace(/\D/g, ''), password })
         if (res.error) { setError(res.error); setLoading(false); return }
         setLoading(false)
         onSuccess({ token: res.token, user: res.user })
@@ -487,6 +492,24 @@ function EmailFlow({ onSuccess }) {
               onChange={e => { setName(e.target.value); setError('') }}
               className="h-11 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300 transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
             />
+          </div>
+        )}
+        {mode === 'register' && (
+          <div>
+            <FieldLabel>Phone Number</FieldLabel>
+            <div className="flex items-center gap-3 rounded-xl border-2 border-slate-200 bg-slate-50 px-3 transition focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100">
+              <span className="text-sm font-black text-slate-500">+91</span>
+              <div className="h-5 w-px bg-slate-300" />
+              <input
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="9876543210"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
+                className="h-11 flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300"
+              />
+            </div>
           </div>
         )}
 

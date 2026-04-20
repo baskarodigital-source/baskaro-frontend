@@ -65,10 +65,10 @@ export default function CategoryBrandsView({
                 <div key={brand.id} onClick={() => onSelectBrand(brand)} className="relative group flex flex-col items-center gap-3 p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer">
                    
                    {/* Action Icons Overlay */}
-                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <div className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
                       <button 
                          onClick={(e) => handleOpenEdit(brand, e)}
-                         className="h-7 w-7 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition-all transform hover:scale-110"
+                         className="h-7 w-7 rounded-lg bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-800 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50/30 transition-all transform hover:scale-110"
                       >
                          <Edit2 size={12} />
                       </button>
@@ -82,7 +82,7 @@ export default function CategoryBrandsView({
                                window.alert(err.message || 'Could not delete brand')
                             }
                          }}
-                         className="h-7 w-7 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-50 transition-all transform hover:scale-110"
+                         className="h-7 w-7 rounded-lg bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-800 hover:text-red-600 hover:border-red-200 hover:bg-red-50/30 transition-all transform hover:scale-110"
                       >
                          <Trash2 size={12} />
                       </button>

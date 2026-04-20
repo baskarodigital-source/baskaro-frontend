@@ -14,6 +14,11 @@ export async function getCatalogBrands() {
   return unwrap(await apiRequest('/api/catalog/brands'))
 }
 
+/** Brands that actually have active phone models (used for Sell Phone + homepage brands). */
+export async function getCatalogPhoneBrands() {
+  return unwrap(await apiRequest('/api/catalog/phone-brands'))
+}
+
 export async function getCatalogModels(params) {
   const q = new URLSearchParams(params).toString()
   return unwrap(await apiRequest(`/api/catalog/models?${q}`))
@@ -206,6 +211,48 @@ export async function getMobileModels(params) {
   return unwrap(await apiRequest(`/api/mobile/models?${q}`))
 }
 
+export async function getBrandDevices(params) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(`/api/mobile/devices?${q}`))
+}
+
+// --- Device specifications (by deviceId) ---
+export async function getDeviceSpecifications(deviceId) {
+  return unwrap(await apiRequest(`/api/device-specifications/${encodeURIComponent(deviceId)}`))
+}
+
+export async function postDeviceSpecification(body) {
+  return unwrap(await apiRequest('/api/device-specifications', { method: 'POST', body, auth: true }))
+}
+
+export async function postDeviceSpecificationOption(body) {
+  return unwrap(await apiRequest('/api/device-specifications/options', { method: 'POST', body, auth: true }))
+}
+
+export async function patchDeviceSpecification(specId, body) {
+  return unwrap(await apiRequest(`/api/device-specifications/${encodeURIComponent(specId)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteDeviceSpecification(specId) {
+  return unwrap(await apiRequest(`/api/device-specifications/${encodeURIComponent(specId)}`, { method: 'DELETE', auth: true }))
+}
+
+export async function deleteDeviceSpecificationOption(optionId) {
+  return unwrap(await apiRequest(`/api/device-specifications/options/${encodeURIComponent(optionId)}`, { method: 'DELETE', auth: true }))
+}
+
+export async function postBrandDevice(body) {
+  return unwrap(await apiRequest('/api/mobile/devices', { method: 'POST', body, auth: true }))
+}
+
+export async function patchBrandDevice(deviceId, body) {
+  return unwrap(await apiRequest(`/api/mobile/devices/${deviceId}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteBrandDevice(deviceId) {
+  return unwrap(await apiRequest(`/api/mobile/devices/${deviceId}`, { method: 'DELETE', auth: true }))
+}
+
 export async function getMobileModel(modelId) {
   return unwrap(await apiRequest(`/api/mobile/models/${modelId}`))
 }
@@ -220,6 +267,11 @@ export async function patchMobileModel(modelId, body) {
 
 export async function deleteMobileModel(modelId) {
   return unwrap(await apiRequest(`/api/mobile/models/${modelId}`, { method: 'DELETE', auth: true }))
+}
+
+// --- Specifications (dynamic model form) ---
+export async function getSpecifications(categoryId) {
+  return unwrap(await apiRequest(`/api/specifications/${encodeURIComponent(categoryId)}`))
 }
 
 // --- Device condition ---
@@ -388,6 +440,81 @@ export async function deleteBanner(bannerId) {
 
 export async function patchBannerToggleStatus(bannerId, body) {
   return unwrap(await apiRequest(`/api/banners/${bannerId}/toggle-status`, { method: 'PATCH', body, auth: true }))
+}
+
+// --- Product offers (public list + admin CRUD) ---
+export async function getOffers(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(q ? `/api/offers?${q}` : '/api/offers'))
+}
+
+export async function getOffersAdmin(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(`/api/offers/admin/all?${q}`, { auth: true }))
+}
+
+export async function postOffer(body) {
+  return unwrap(await apiRequest('/api/offers/admin', { method: 'POST', body, auth: true }))
+}
+
+export async function patchOffer(id, body) {
+  return unwrap(await apiRequest(`/api/offers/admin/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteOffer(id) {
+  return unwrap(await apiRequest(`/api/offers/admin/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+// --- Homepage flash deals (public list + admin CRUD) ---
+export async function getFlashDeals() {
+  return unwrap(await apiRequest('/api/flash-deals'))
+}
+
+export async function getFlashDealsAdmin(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(`/api/flash-deals/admin/all?${q}`, { auth: true }))
+}
+
+export async function postFlashDeal(body) {
+  return unwrap(await apiRequest('/api/flash-deals/admin', { method: 'POST', body, auth: true }))
+}
+
+export async function patchFlashDeal(id, body) {
+  return unwrap(await apiRequest(`/api/flash-deals/admin/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteFlashDeal(id) {
+  return unwrap(await apiRequest(`/api/flash-deals/admin/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+export async function getFlashDealSection() {
+  return unwrap(await apiRequest('/api/flash-deals/section'))
+}
+
+export async function patchFlashDealSection(body) {
+  return unwrap(await apiRequest('/api/flash-deals/admin/section', { method: 'PATCH', body, auth: true }))
+}
+
+// --- Homepage services (public list + admin CRUD) ---
+export async function getHomeServices() {
+  return unwrap(await apiRequest('/api/home-services'))
+}
+
+export async function getHomeServicesAdmin(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(`/api/home-services/admin/all?${q}`, { auth: true }))
+}
+
+export async function postHomeService(body) {
+  return unwrap(await apiRequest('/api/home-services/admin', { method: 'POST', body, auth: true }))
+}
+
+export async function patchHomeService(id, body) {
+  return unwrap(await apiRequest(`/api/home-services/admin/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteHomeService(id) {
+  return unwrap(await apiRequest(`/api/home-services/admin/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
 }
 
 // --- Reports ---

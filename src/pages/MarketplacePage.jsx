@@ -15,10 +15,12 @@ export default function MarketplacePage() {
   const categoryId = params.get('categoryId') || ''
 
   const [brands, setBrands] = React.useState([])
-  const [modelsByBrandId, setModelsByBrandId] = React.useState({})
   const [loading, setLoading] = React.useState(true)
   const [err, setErr] = React.useState('')
   const [query, setQuery] = React.useState('')
+  const [selectedBrand, setSelectedBrand] = React.useState(null)
+  const [models, setModels] = React.useState([])
+  const [modelsLoading, setModelsLoading] = React.useState(false)
 
   React.useEffect(() => {
     let cancelled = false
@@ -35,27 +37,8 @@ export default function MarketplacePage() {
 
         if (cancelled) return
         setBrands(bItems)
-
-        const pairs = await Promise.all(
-          bItems.map(async (b) => {
-            try {
-              const modelRes = await api.getMobileModels({ brandId: b.id, limit: 500 })
-              const mItems = normalizeItems(modelRes)
-                .map((m) => ({
-                  id: m._id ?? m.id,
-                  name: m.name ?? '',
-                  image: m.image ?? m.imageUrl ?? '',
-                }))
-                .filter((m) => m.id && m.name)
-              return [b.id, mItems]
-            } catch {
-              return [b.id, []]
-            }
-          }),
-        )
-
-        if (cancelled) return
-        setModelsByBrandId(Object.fromEntries(pairs))
+        setSelectedBrand(null)
+        setModels([])
       } catch (e) {
         if (!cancelled) setErr(e?.message || 'Failed to load marketplace catalog')
       } finally {
@@ -71,20 +54,42 @@ export default function MarketplacePage() {
   const q = query.trim().toLowerCase()
   const filteredBrands = React.useMemo(() => {
     if (!q) return brands
-    return brands.filter((b) => {
-      if (b.name.toLowerCase().includes(q)) return true
-      const ms = modelsByBrandId[b.id] || []
-      return ms.some((m) => m.name.toLowerCase().includes(q))
-    })
-  }, [brands, modelsByBrandId, q])
+    return brands.filter((b) => b.name.toLowerCase().includes(q))
+  }, [brands, q])
+
+  const filteredModels = React.useMemo(() => {
+    if (!selectedBrand) return []
+    if (!q) return models
+    return models.filter((m) => m.name.toLowerCase().includes(q))
+  }, [models, q, selectedBrand])
+
+  const loadModelsForBrand = React.useCallback(async (brand) => {
+    if (!brand?.id) return
+    setSelectedBrand(brand)
+    setModelsLoading(true)
+    setErr('')
+    try {
+      const modelRes = await api.getMobileModels({ brandId: brand.id, limit: 500 })
+      const mItems = normalizeItems(modelRes)
+        .map((m) => ({
+          id: m._id ?? m.id,
+          name: m.name ?? '',
+          image: m.image ?? m.imageUrl ?? '',
+        }))
+        .filter((m) => m.id && m.name)
+      setModels(mItems)
+    } catch (e) {
+      setModels([])
+      setErr(e?.message || 'Failed to load models')
+    } finally {
+      setModelsLoading(false)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50 font-['Outfit'] pb-16">
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-10">
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-[0.2em] mb-5">
-            Marketplace
-          </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Browse all <span className="text-blue-600">brands</span> & models
           </h1>
@@ -97,7 +102,7 @@ export default function MarketplacePage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
             type="text"
-            placeholder="Search brand or model..."
+            placeholder={selectedBrand ? 'Search model...' : 'Search brand...'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full h-11 bg-white border border-slate-200 rounded-2xl pl-12 pr-4 text-sm font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600/15 focus:border-blue-600 transition-all"
@@ -134,10 +139,13 @@ export default function MarketplacePage() {
               </div>
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {filteredBrands.map((b) => (
-                  <a
+                  <button
                     key={b.id}
-                    href={`#brand-${encodeURIComponent(b.id)}`}
-                    className="group rounded-2xl border border-slate-100 bg-white p-4 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md transition-all"
+                    type="button"
+                    onClick={() => loadModelsForBrand(b)}
+                    className={`group rounded-2xl border bg-white p-4 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md transition-all text-left ${
+                      selectedBrand?.id === b.id ? 'border-blue-300 shadow-md' : 'border-slate-100'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
@@ -151,75 +159,68 @@ export default function MarketplacePage() {
                         <div className="text-sm font-black text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                           {b.name}
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {(modelsByBrandId[b.id]?.length ?? 0)} models
-                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tap to view models</div>
                       </div>
                     </div>
-                  </a>
+                  </button>
                 ))}
               </div>
             </section>
 
-            <section className="space-y-6">
-              {filteredBrands.map((b) => {
-                const allModels = modelsByBrandId[b.id] || []
-                const models = !q
-                  ? allModels
-                  : allModels.filter((m) => m.name.toLowerCase().includes(q))
-                return (
-                  <div
-                    key={b.id}
-                    id={`brand-${encodeURIComponent(b.id)}`}
-                    className="rounded-3xl border border-slate-100 bg-white overflow-hidden"
+            {selectedBrand && (
+              <section className="rounded-3xl border border-slate-100 bg-white overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/40 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-11 w-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
+                      {selectedBrand.logo ? (
+                        <img src={selectedBrand.logo} alt={selectedBrand.name} className="h-8 w-8 object-contain mix-blend-multiply" />
+                      ) : (
+                        <div className="text-xs font-black text-slate-300">{selectedBrand.name.slice(0, 2).toUpperCase()}</div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black text-slate-900 truncate">{selectedBrand.name}</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {modelsLoading ? 'Loading…' : `${filteredModels.length} model${filteredModels.length === 1 ? '' : 's'}`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedBrand(null); setModels([]); setQuery(''); }}
+                    className="text-xs font-black text-slate-500 hover:text-slate-900"
                   >
-                    <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/40 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-11 w-11 rounded-2xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden">
-                          {b.logo ? (
-                            <img src={b.logo} alt={b.name} className="h-8 w-8 object-contain mix-blend-multiply" />
+                    Clear
+                  </button>
+                </div>
+
+                {modelsLoading ? (
+                  <div className="p-8 text-sm font-semibold text-slate-500">Loading models…</div>
+                ) : filteredModels.length === 0 ? (
+                  <div className="p-8 text-sm font-semibold text-slate-500">No models found.</div>
+                ) : (
+                  <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {filteredModels.map((m) => (
+                      <div
+                        key={m.id}
+                        className="group rounded-2xl border border-slate-100 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition"
+                      >
+                        <div className="h-20 w-full rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
+                          {m.image ? (
+                            <img src={m.image} alt={m.name} className="h-full w-full object-contain p-2" />
                           ) : (
-                            <div className="text-xs font-black text-slate-300">{b.name.slice(0, 2).toUpperCase()}</div>
+                            <div className="h-10 w-10 rounded-xl bg-slate-200" />
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-lg font-black text-slate-900 truncate">{b.name}</h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            {models.length} model{models.length === 1 ? '' : 's'}
-                          </p>
+                        <div className="mt-3 text-xs font-black text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-2">
+                          {m.name}
                         </div>
                       </div>
-                    </div>
-
-                    {models.length === 0 ? (
-                      <div className="p-8 text-sm font-semibold text-slate-500">
-                        No models found.
-                      </div>
-                    ) : (
-                      <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        {models.map((m) => (
-                          <div
-                            key={m.id}
-                            className="group rounded-2xl border border-slate-100 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition"
-                          >
-                            <div className="h-20 w-full rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
-                              {m.image ? (
-                                <img src={m.image} alt={m.name} className="h-full w-full object-contain p-2" />
-                              ) : (
-                                <div className="h-10 w-10 rounded-xl bg-slate-200" />
-                              )}
-                            </div>
-                            <div className="mt-3 text-xs font-black text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-2">
-                              {m.name}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                )
-              })}
-            </section>
+                )}
+              </section>
+            )}
           </div>
         )}
       </main>

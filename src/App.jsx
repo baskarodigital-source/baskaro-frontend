@@ -26,6 +26,7 @@ import WarrantyPolicyPage from './pages/WarrantyPolicyPage'
 import ReferEarnPage from './pages/ReferEarnPage'
 import CareersPage from './pages/CareersPage'
 import PressReleasesPage from './pages/PressReleasesPage'
+import ProfilePage from './pages/ProfilePage'
 
 function NotFoundPage() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
                     <Route path="/brand/:brandName" element={<BrandPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/dashboard" element={<UserDashboard />} />
+                    <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/sell-phone" element={<SellPhonePage />} />
                     <Route path="/buy-accessories" element={<BuyAccessoriesPage />} />
                     <Route path="/buy-pre-owned" element={<BuyPreOwnedPage />} />

@@ -8,25 +8,29 @@ import {
 import * as api from '../../lib/api/baskaroApi.js'
 import CategoryBrandsView from '../../components/CategoryBrandsView.jsx'
 import BrandModelsView from '../../components/BrandModelsView.jsx'
+import BrandDevicesView from '../../components/BrandDevicesView.jsx'
 
+/** id = UI key; iconKey = RibbonCategory.iconKey (backend enum). */
 export const RIBBON_ICON_OPTIONS = [
-  { id: 'Smartphone', icon: Smartphone, color: 'text-blue-500' },
-  { id: 'Monitor', icon: Monitor, color: 'text-purple-500' },
-  { id: 'Watch', icon: Watch, color: 'text-orange-500' },
-  { id: 'Laptop', icon: Laptop, color: 'text-red-500' },
-  { id: 'Tablet', icon: Tablet, color: 'text-indigo-500' },
-  { id: 'MousePointer2', icon: MousePointer2, color: 'text-emerald-500' },
-  { id: 'Tv', icon: Tv, color: 'text-pink-500' },
-  { id: 'Headphones', icon: Headphones, color: 'text-amber-500' },
-  { id: 'Speaker', icon: Speaker, color: 'text-cyan-500' },
-  { id: 'Cpu', icon: Cpu, color: 'text-slate-500' },
+  { id: 'Smartphone', iconKey: 'smartphone', icon: Smartphone, color: 'text-blue-500' },
+  { id: 'Monitor', iconKey: 'tv', icon: Monitor, color: 'text-purple-500' },
+  { id: 'Watch', iconKey: 'watch', icon: Watch, color: 'text-orange-500' },
+  { id: 'Laptop', iconKey: 'laptop', icon: Laptop, color: 'text-red-500' },
+  { id: 'Tablet', iconKey: 'tablet', icon: Tablet, color: 'text-indigo-500' },
+  { id: 'MousePointer2', iconKey: 'sparkles', icon: MousePointer2, color: 'text-emerald-500' },
+  { id: 'Tv', iconKey: 'tv', icon: Tv, color: 'text-pink-500' },
+  { id: 'Headphones', iconKey: 'headphones', icon: Headphones, color: 'text-amber-500' },
+  { id: 'Speaker', iconKey: 'gift', icon: Speaker, color: 'text-cyan-500' },
+  { id: 'Cpu', iconKey: 'cpu', icon: Cpu, color: 'text-slate-500' },
 ];
 
 export default function AllCategoriesView() {
-  const [view, setView] = useState('Categories'); // 'Categories' | 'Brands' | 'Models'
+  const [view, setView] = useState('Categories'); // 'Categories' | 'Brands' | 'Devices' | 'Models'
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(null);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -35,20 +39,29 @@ export default function AllCategoriesView() {
   // For CategoryBrandsView 
   const [brands, setBrands] = useState([]);
   const [brandsLoading, setBrandsLoading] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
 
   const loadCategories = async () => {
     setLoading(true);
     try {
-      const res = await api.getRibbonCategories();
-      const mapped = (res || []).map(cat => ({
-        id: cat._id,
-        name: cat.title,
-        icon: RIBBON_ICON_OPTIONS.find(o => o.id === cat.iconType)?.icon || LayoutGrid,
-        color: RIBBON_ICON_OPTIONS.find(o => o.id === cat.iconType)?.color || 'text-slate-500',
-        iconType: cat.iconType || 'Smartphone',
-        itemsCount: cat.brandsCount || 0,
-        active: cat.isActive !== false
-      }));
+      const res = await api.getRibbonCategoriesAdmin();
+      const list = Array.isArray(res) ? res : [];
+      const mapped = list.map((cat) => {
+        const opt = RIBBON_ICON_OPTIONS.find((o) => o.iconKey === cat.iconKey);
+        return {
+          id: cat._id,
+          name: cat.label || '',
+          path: cat.path || '/marketplace',
+          imageUrl: cat.imageUrl || '',
+          iconKey: cat.iconKey,
+          icon: opt?.icon || LayoutGrid,
+          color: opt?.color || 'text-slate-500',
+          iconType: opt?.id || 'Smartphone',
+          itemsCount: cat.brandsCount || 0,
+          active: cat.isActive !== false,
+        };
+      });
       setCategories(mapped);
       setErr('');
     } catch (e) {
@@ -79,13 +92,55 @@ export default function AllCategoriesView() {
     }
   };
 
-  const onAddCategory = async (catData) => {
+  const loadDevices = async (brandId) => {
+    setDevicesLoading(true);
     try {
-      await api.postRibbonCategory(catData);
+      const res = await api.getBrandDevices({ brandId, limit: 200, active: true });
+      const items = res?.items || (Array.isArray(res) ? res : []);
+      setDevices(items.map((d) => ({
+        id: d._id ?? d.id,
+        name: d.name ?? '',
+        imageUrl: d.imageUrl ?? '',
+      })).filter((d) => d.id && d.name));
+    } catch (err) {
+      console.error('Failed to load devices:', err);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
+  const onAddCategory = async (catData) => {
+    const opt = RIBBON_ICON_OPTIONS.find((o) => o.id === catData.iconType);
+    const iconKey = opt?.iconKey || 'smartphone';
+    const body = {
+      label: (catData.title || '').trim(),
+      iconKey,
+      path: '/marketplace',
+      sortOrder: categories.length,
+      isActive: true,
+    };
+    if (catData.photo) body.imageUrl = catData.photo;
+    try {
+      await api.postRibbonCategory(body);
       await loadCategories();
       setIsAddingCategory(false);
     } catch (e) {
       alert(e.message || 'Creation failed');
+    }
+  };
+
+  const onEditCategory = async (catData) => {
+    if (!editingCategory?.id) return;
+    const body = {
+      label: (catData.title || '').trim(),
+    };
+    if (catData.photo) body.imageUrl = catData.photo;
+    try {
+      await api.patchRibbonCategory(editingCategory.id, body);
+      await loadCategories();
+      setEditingCategory(null);
+    } catch (e) {
+      alert(e.message || 'Update failed');
     }
   };
 
@@ -97,6 +152,13 @@ export default function AllCategoriesView() {
 
   const handleSelectBrand = (brand) => {
     setSelectedBrand(brand);
+    setView('Devices');
+    setSelectedDevice(null);
+    loadDevices(brand.id);
+  };
+
+  const handleSelectDevice = (device) => {
+    setSelectedDevice(device);
     setView('Models');
   };
 
@@ -142,6 +204,23 @@ export default function AllCategoriesView() {
     }
   };
 
+  const handleOnAddDevice = async (name, imageUrl) => {
+    if (!selectedBrand) return;
+    await api.postBrandDevice({ brandId: selectedBrand.id, name, imageUrl });
+    await loadDevices(selectedBrand.id);
+  };
+
+  const handleOnEditDevice = async (deviceId, name, imageUrl) => {
+    await api.patchBrandDevice(deviceId, { name, imageUrl });
+    await loadDevices(selectedBrand.id);
+  };
+
+  const handleOnDeleteDevice = async (deviceId) => {
+    if (!confirm('Are you sure you want to delete this device?')) return;
+    await api.deleteBrandDevice(deviceId);
+    await loadDevices(selectedBrand.id);
+  };
+
   return (
     <div className="space-y-10">
       {err && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">{err}</div>}
@@ -175,6 +254,7 @@ export default function AllCategoriesView() {
                       key={cat.id} 
                       category={cat} 
                       onClick={() => handleSelectCategory(cat)} 
+                      onEdit={(e) => { e.stopPropagation(); setEditingCategory(cat); }}
                       onDelete={(e) => { e.stopPropagation(); handleOnDeleteCategory(cat.id); }}
                       busy={busyId === cat.id}
                     />
@@ -204,11 +284,26 @@ export default function AllCategoriesView() {
            />
         )}
 
+        {view === 'Devices' && (
+          <BrandDevicesView
+            category={selectedCategory}
+            brand={selectedBrand}
+            devices={devices}
+            devicesLoading={devicesLoading}
+            onBack={() => setView('Brands')}
+            onAddDevice={handleOnAddDevice}
+            onSelectDevice={handleSelectDevice}
+            onEditDevice={handleOnEditDevice}
+            onDeleteDevice={handleOnDeleteDevice}
+          />
+        )}
+
         {view === 'Models' && (
            <BrandModelsView 
              category={selectedCategory} 
              brand={selectedBrand} 
-             onBack={() => setView('Brands')} 
+             device={selectedDevice}
+             onBack={() => setView('Devices')} 
            />
         )}
       </AnimatePresence>
@@ -222,18 +317,26 @@ export default function AllCategoriesView() {
             />
           )}
        </AnimatePresence>
+
+       <AnimatePresence>
+          {editingCategory && (
+            <EditCategoryModal
+              category={editingCategory}
+              onCancel={() => setEditingCategory(null)}
+              onSave={onEditCategory}
+            />
+          )}
+       </AnimatePresence>
     </div>
   );
 }
 
-function CategoryCard({ category, onClick, onDelete, busy }) {
-  const categoryImages = {
-    'Smartphones': 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1000&auto=format&fit=crop',
-    'Smartwatches': 'https://images.unsplash.com/photo-1544117518-30dd5f2f1094?q=80&w=1000&auto=format&fit=crop',
-    'Laptops': 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=1000&auto=format&fit=crop',
-    'Accessories': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop'
-  }
-  const img = categoryImages[category.name] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop'
+const FALLBACK_CARD_IMG =
+  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop';
+
+function CategoryCard({ category, onClick, onEdit, onDelete, busy }) {
+  const raw = category.imageUrl && String(category.imageUrl).trim();
+  const img = raw ? raw : FALLBACK_CARD_IMG;
 
   return (
     <div 
@@ -246,18 +349,44 @@ function CategoryCard({ category, onClick, onDelete, busy }) {
        <div className="p-8 flex flex-col flex-1">
           <div className="flex justify-between items-start mb-4">
              <h3 className="font-black text-slate-800 text-xl tracking-tighter uppercase">{category.name}</h3>
-             <span className="bg-emerald-50 text-emerald-500 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Active</span>
+             <span
+               className={
+                 category.active
+                   ? 'bg-emerald-50 text-emerald-500 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest'
+                   : 'bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest'
+               }
+             >
+               {category.active ? 'Active' : 'Inactive'}
+             </span>
           </div>
           <div className="flex items-center justify-between mt-auto">
-             <span className="text-[10px] font-bold text-slate-300">/marketplace</span>
+             <span className="text-[10px] font-bold text-slate-300">{category.path || '/marketplace'}</span>
              <div className="flex items-center gap-1 text-blue-600 font-bold text-xs group-hover:translate-x-1 transition-transform">
                 View Brands <ChevronRight size={14} strokeWidth={3} />
              </div>
           </div>
        </div>
-       <button type="button" disabled={busy} onClick={onDelete} className="absolute top-6 right-6 h-10 w-10 rounded-full bg-white/80 backdrop-blur shadow-sm text-slate-400 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all z-10 font-bold">
-          <X size={16} />
-       </button>
+       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+         <button
+           type="button"
+           onClick={onEdit}
+           className="h-9 w-9 rounded-xl bg-white/85 backdrop-blur shadow-md shadow-slate-200/60 text-slate-400 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-slate-900 transition-all"
+           aria-label="Edit category"
+           title="Edit"
+         >
+           <Edit2 size={16} />
+         </button>
+         <button
+           type="button"
+           disabled={busy}
+           onClick={onDelete}
+           className="h-9 w-9 rounded-xl bg-white/85 backdrop-blur shadow-md shadow-slate-200/60 text-slate-400 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-red-500 transition-all disabled:opacity-50"
+           aria-label="Delete category"
+           title="Delete"
+         >
+            <X size={16} />
+         </button>
+       </div>
     </div>
   );
 }
@@ -275,6 +404,14 @@ function AddNewCategoryModal({ onCancel, onSave }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onPickPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => setFormData((prev) => ({ ...prev, photo: reader.result }));
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -314,15 +451,19 @@ function AddNewCategoryModal({ onCancel, onSave }) {
              {/* Photo Field */}
              <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload Photo</label>
-                <div 
-                   className="w-full h-44 border-2 border-dashed border-blue-200 rounded-3xl bg-blue-50/20 flex flex-col items-center justify-center group cursor-pointer hover:bg-blue-50 transition-all"
+                <div
+                   className="w-full h-44 border-2 border-dashed border-blue-200 rounded-3xl bg-blue-50/20 flex flex-col items-center justify-center group cursor-pointer hover:bg-blue-50 transition-all overflow-hidden"
                    onClick={() => document.getElementById('cat-photo-upload').click()}
                 >
-                   <input type="file" id="cat-photo-upload" className="hidden" onChange={e => {
-                     // Placeholder for image preview logic if needed
-                   }} />
-                   <UploadCloud size={32} className="text-blue-500 mb-3 group-hover:scale-110 transition-transform" />
-                   <span className="text-[11px] font-black text-slate-500 tracking-widest uppercase">Click to upload</span>
+                   <input type="file" id="cat-photo-upload" accept="image/*" className="hidden" onChange={onPickPhoto} />
+                   {formData.photo ? (
+                     <img src={formData.photo} alt="" className="h-full w-full object-cover" />
+                   ) : (
+                     <>
+                       <UploadCloud size={32} className="text-blue-500 mb-3 group-hover:scale-110 transition-transform" />
+                       <span className="text-[11px] font-black text-slate-500 tracking-widest uppercase">Click to upload</span>
+                     </>
+                   )}
                 </div>
              </div>
 
@@ -345,6 +486,123 @@ function AddNewCategoryModal({ onCancel, onSave }) {
              </div>
           </form>
        </motion.div>
+    </div>
+  );
+}
+
+function EditCategoryModal({ category, onCancel, onSave }) {
+  const [formData, setFormData] = useState(() => ({
+    title: category?.name || '',
+    photo: null,
+  }));
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setFormData({ title: category?.name || '', photo: null });
+  }, [category?.id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title) return alert('Enter a title');
+    setBusy(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onPickPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => setFormData((prev) => ({ ...prev, photo: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const preview = formData.photo || category?.imageUrl || '';
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onCancel}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden shadow-slate-900/20"
+      >
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Edit2 size={22} className="text-blue-600" strokeWidth={2.5} />
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">Edit Category</h3>
+          </div>
+          <button onClick={onCancel} className="text-slate-300 hover:text-slate-600 transition-colors">
+            <X size={20} strokeWidth={3} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category Name</label>
+            <input
+              required
+              type="text"
+              autoFocus
+              placeholder="e.g. Headphones"
+              className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 font-bold text-slate-700 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload Photo</label>
+            <div
+              className="w-full h-44 border-2 border-dashed border-blue-200 rounded-3xl bg-blue-50/20 flex flex-col items-center justify-center group cursor-pointer hover:bg-blue-50 transition-all overflow-hidden"
+              onClick={() => document.getElementById('cat-edit-photo-upload').click()}
+            >
+              <input type="file" id="cat-edit-photo-upload" accept="image/*" className="hidden" onChange={onPickPhoto} />
+              {preview ? (
+                <img src={preview} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <>
+                  <UploadCloud size={32} className="text-blue-500 mb-3 group-hover:scale-110 transition-transform" />
+                  <span className="text-[11px] font-black text-slate-500 tracking-widest uppercase">Click to upload</span>
+                </>
+              )}
+            </div>
+            {!!category?.imageUrl && !formData.photo && (
+              <div className="text-[10px] font-bold text-slate-400">
+                Current image will be kept unless you upload a new one.
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 bg-white border border-slate-200 rounded-2xl py-4 text-sm font-black text-slate-700 hover:bg-slate-50 transition-all transform active:scale-95"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex-1 bg-[#101828] rounded-2xl py-4 text-sm font-black text-white shadow-xl shadow-slate-200 hover:bg-black transition-all transform active:scale-95"
+            >
+              {busy ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 }

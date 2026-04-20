@@ -1,7 +1,9 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Heart, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { getFlashDeals, getFlashDealSection } from '../lib/api/baskaroApi'
 
-const FLASH_DEALS = [
+const FLASH_DEALS_FALLBACK = [
   {
     id: 's25-5g',
     name: 'Samsung S25 5G 12GB 256GB M...',
@@ -9,6 +11,7 @@ const FLASH_DEALS = [
     originalPrice: '₹80,999',
     discount: '12% off',
     image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=640&auto=format&fit=crop',
+    linkUrl: '',
   },
   {
     id: 'iphone-15',
@@ -17,6 +20,7 @@ const FLASH_DEALS = [
     originalPrice: '₹69,900',
     discount: '23% off',
     image: 'https://images.unsplash.com/photo-1567581935884-3349723552ca?q=80&w=640&auto=format&fit=crop',
+    linkUrl: '',
   },
   {
     id: 'oneplus-13',
@@ -25,36 +29,88 @@ const FLASH_DEALS = [
     originalPrice: '₹86,999',
     discount: '18% off',
     image: 'https://images.unsplash.com/photo-1585060544812-6b45742d762f?q=80&w=640&auto=format&fit=crop',
-  },
-  {
-    id: 'nothing-3',
-    name: 'Nothing Phone (3) 12GB',
-    price: '₹49,999',
-    originalPrice: '₹84,999',
-    discount: '41% off',
-    image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=640&auto=format&fit=crop', // Using a generic elegant phone image
-  },
-  {
-    id: 'oppo-x9',
-    name: 'Oppo Find X9 16GB',
-    price: '₹78,499',
-    originalPrice: '₹1,09,999',
-    discount: '29% off',
-    image: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?q=80&w=640&auto=format&fit=crop',
-  },
-  {
-    id: 'flip-7-fe',
-    name: 'Samsung Galaxy Z Flip 7 FE',
-    price: '₹79,999',
-    originalPrice: '₹1,10,999',
-    discount: '28% off',
-    image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?q=80&w=640&auto=format&fit=crop',
+    linkUrl: '',
   },
 ]
 
+function formatInr(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return '—'
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(v)
+  } catch {
+    return `₹${v}`
+  }
+}
+
+function discountLabel(mrpInr, saleInr) {
+  const m = Number(mrpInr)
+  const s = Number(saleInr)
+  if (!Number.isFinite(m) || m <= 0 || !Number.isFinite(s) || s >= m) return 'Deal'
+  const pct = Math.round(((m - s) / m) * 100)
+  return `${pct}% off`
+}
+
+function mapApiDeal(d) {
+  const id = d._id != null ? String(d._id) : d.id
+  return {
+    id,
+    name: d.title || 'Product',
+    price: formatInr(d.salePriceInr),
+    originalPrice: formatInr(d.mrpInr),
+    discount: discountLabel(d.mrpInr, d.salePriceInr),
+    image: d.imageUrl || '',
+    linkUrl: d.linkUrl || '',
+  }
+}
+
 export function FlashDealsSection() {
+  const navigate = useNavigate()
   const scrollRef = useRef(null)
   const [activeTab, setActiveTab] = useState(0)
+  const [deals, setDeals] = useState(FLASH_DEALS_FALLBACK)
+  const [loading, setLoading] = useState(true)
+  const [usedFallback, setUsedFallback] = useState(true)
+  const [title, setTitle] = useState('Hurry Up! Get Up to 40% Off')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getFlashDealSection()
+      .then((section) => {
+        if (cancelled) return
+        if (section?.title) setTitle(String(section.title))
+      })
+      .catch(() => {})
+    getFlashDeals()
+      .then((list) => {
+        if (cancelled) return
+        const arr = Array.isArray(list) ? list : []
+        if (arr.length > 0) {
+          setDeals(arr.map(mapApiDeal))
+          setUsedFallback(false)
+        } else {
+          setDeals([])
+          setUsedFallback(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDeals(FLASH_DEALS_FALLBACK)
+          setUsedFallback(true)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -63,93 +119,149 @@ export function FlashDealsSection() {
     }
   }
 
+  function openDealLink(deal, e) {
+    if (e) e.stopPropagation()
+    if (!deal.linkUrl) return
+    if (/^https?:\/\//i.test(deal.linkUrl)) {
+      window.open(deal.linkUrl, '_blank', 'noopener,noreferrer')
+    } else {
+      navigate(deal.linkUrl)
+    }
+  }
+
+  const CardInner = ({ deal }) => (
+    <>
+      <span className="absolute left-3 top-3 z-10 rounded-md bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
+        {deal.discount}
+      </span>
+
+      <button
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute right-3 top-3 z-10 rounded-full bg-white p-1.5 text-slate-400 shadow-sm transition hover:text-red-500"
+        aria-label="Add to wishlist"
+      >
+        <Heart className="h-4 w-4" />
+      </button>
+
+      <div className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-slate-50 p-2">
+        {deal.image ? (
+          <img
+            src={deal.image}
+            alt=""
+            className="h-full w-full object-contain transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <span className="text-[10px] font-bold text-slate-400">No image</span>
+        )}
+      </div>
+
+      <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] text-[13px] font-bold text-slate-800">{deal.name}</h3>
+
+      <p className="mb-1 text-[10px] font-medium text-slate-400">*best price starts from</p>
+
+      <div className="mb-4 flex items-baseline gap-2">
+        <span className="text-sm font-extrabold text-green-600">{deal.price}</span>
+        <span className="text-[11px] font-medium text-slate-400 line-through">{deal.originalPrice}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full items-center justify-center gap-1.5 rounded-full border border-slate-900 py-1.5 text-[10px] font-bold text-slate-900 transition-all hover:bg-slate-900 hover:text-white"
+      >
+        <Plus className="h-3 w-3 stroke-[2.5]" />
+        add to cart
+      </button>
+    </>
+  )
+
   return (
     <section className="w-full bg-[#fef2e8] py-10">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-        {/* Pagination Dots at top */}
         <div className="mb-6 flex justify-center gap-2">
           {[0, 1, 2].map((i) => (
-            <div
+            <button
               key={i}
-              className={`h-2.5 w-2.5 rounded-full ${i === activeTab ? 'bg-red-600' : 'bg-slate-300'}`}
+              type="button"
+              aria-label={`Slide ${i + 1}`}
+              onClick={() => setActiveTab(i)}
+              className={`h-2.5 w-2.5 rounded-full transition-colors ${i === activeTab ? 'bg-red-600' : 'bg-slate-300'}`}
             />
           ))}
         </div>
 
-        {/* Title */}
-        <h2 className="mb-8 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Hurry Up! Get Up to 40% Off
-        </h2>
+        <h2 className="mb-8 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h2>
 
-        <div className="relative">
-          {/* Scroll Buttons */}
-          <button
-            onClick={() => scroll('left')}
-            className="absolute -left-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white p-2 shadow-lg hover:bg-slate-50 lg:flex"
-          >
-            <ChevronLeft className="h-6 w-6 text-slate-700" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="absolute -right-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white p-2 shadow-lg hover:bg-slate-50 lg:flex"
-          >
-            <ChevronRight className="h-6 w-6 text-slate-700" />
-          </button>
-
-          {/* Cards Container */}
-          <div
-            ref={scrollRef}
-            className="flex gap-4 overflow-x-auto pb-4 transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {FLASH_DEALS.map((deal) => (
+        {loading ? (
+          <div className="flex gap-4 overflow-hidden pb-4">
+            {Array.from({ length: 4 }).map((_, i) => (
               <div
-                key={deal.id}
-                className="group relative flex w-[170px] shrink-0 flex-col rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-md sm:w-[190px] md:w-[210px]"
-              >
-                {/* Discount Badge */}
-                <span className="absolute left-3 top-3 z-10 rounded-md bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                  {deal.discount}
-                </span>
-
-                {/* Heart Icon */}
-                <button className="absolute right-3 top-3 z-10 rounded-full bg-white p-1.5 text-slate-400 shadow-sm transition hover:text-red-500">
-                  <Heart className="h-4 w-4" />
-                </button>
-
-                {/* Image */}
-                <div className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-slate-50 p-2">
-                  <img
-                    src={deal.image}
-                    alt={deal.name}
-                    className="h-full w-full object-contain transition-transform group-hover:scale-105"
-                  />
-                </div>
-
-                {/* Info */}
-                <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] text-[13px] font-bold text-slate-800">
-                  {deal.name}
-                </h3>
-                
-                <p className="mb-1 text-[10px] font-medium text-slate-400">
-                  *best price starts from
-                </p>
-                
-                <div className="mb-4 flex items-baseline gap-2">
-                  <span className="text-sm font-extrabold text-green-600">{deal.price}</span>
-                  <span className="text-[11px] font-medium text-slate-400 line-through">
-                    {deal.originalPrice}
-                  </span>
-                </div>
-
-                {/* Add to Cart Button */}
-                <button className="flex w-full items-center justify-center gap-1.5 rounded-full border border-slate-900 py-1.5 text-[10px] font-bold text-slate-900 transition-all hover:bg-slate-900 hover:text-white">
-                  <Plus className="h-3 w-3 stroke-[2.5]" />
-                  add to cart
-                </button>
-              </div>
+                key={`sk-${i}`}
+                className="h-[280px] w-[170px] shrink-0 animate-pulse rounded-2xl bg-white/80 sm:w-[190px] md:w-[210px]"
+              />
             ))}
           </div>
-        </div>
+        ) : deals.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-slate-200 bg-white/60 py-12 text-center text-sm font-semibold text-slate-500">
+            No flash deals yet. Add products in Admin → Offers &amp; Coupons → Homepage flash deals.
+          </p>
+        ) : (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              className="absolute -left-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white p-2 shadow-lg hover:bg-slate-50 lg:flex"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-6 w-6 text-slate-700" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              className="absolute -right-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white p-2 shadow-lg hover:bg-slate-50 lg:flex"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-6 w-6 text-slate-700" />
+            </button>
+
+            <div
+              ref={scrollRef}
+              className="flex gap-4 overflow-x-auto pb-4 transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {deals.map((deal) => {
+                const wrapClass =
+                  'group relative flex w-[170px] shrink-0 flex-col rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-md sm:w-[190px] md:w-[210px]'
+                const clickable = Boolean(deal.linkUrl)
+                return (
+                  <div
+                    key={deal.id}
+                    className={[wrapClass, clickable ? 'cursor-pointer' : ''].join(' ')}
+                    role={clickable ? 'button' : undefined}
+                    tabIndex={clickable ? 0 : undefined}
+                    onClick={() => openDealLink(deal)}
+                    onKeyDown={(e) => {
+                      if (!clickable) return
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        openDealLink(deal)
+                      }
+                    }}
+                  >
+                    <CardInner deal={deal} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {!loading && usedFallback ? (
+          <p className="mt-2 text-center text-[11px] text-slate-400">
+            Could not load deals — showing samples. Check API or add deals in Admin.
+          </p>
+        ) : null}
       </div>
     </section>
   )

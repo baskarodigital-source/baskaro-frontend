@@ -19,6 +19,7 @@ import PickupsManagementView from './Admin/PickupsManagementView.jsx'
 import PaymentsManagementView from './Admin/PaymentsManagementView.jsx'
 import InventoryManagementView from './Admin/InventoryManagementView.jsx'
 import OffersManagementView from './Admin/OffersManagementView.jsx'
+import ServicesManagementView from './Admin/ServicesManagementView.jsx'
 import CmsManagementView from './Admin/CmsManagementView.jsx'
 import AnalyticsManagementView from './Admin/AnalyticsManagementView.jsx'
 import RolesManagementView from './Admin/RolesManagementView.jsx'
@@ -45,7 +46,8 @@ const navSections = [
   {
     title: 'MARKETING & TOOLS',
     items: [
-      { id: 'Offers', icon: Tag, label: 'Offers & Coupons' },
+      { id: 'Offers', icon: Tag, label: 'Offers' },
+      { id: 'Services', icon: ChevronRight, label: 'Services' },
       { id: 'CMS', icon: ImageIcon, label: 'Banner & CMS' },
       { id: 'Analytics', icon: BarChart3, label: 'Reports & Analytics' },
       { id: 'Roles', icon: ShieldAlert, label: 'Roles & Permissions' },
@@ -98,6 +100,7 @@ export default function AdminDashboard() {
       case 'Payments': return <PaymentsManagementView />
       case 'Inventory': return <InventoryManagementView />
       case 'Offers': return <OffersManagementView />
+      case 'Services': return <ServicesManagementView />
       case 'CMS': return <CmsManagementView />
       case 'Analytics': return <AnalyticsManagementView />
       case 'Roles': return <RolesManagementView />

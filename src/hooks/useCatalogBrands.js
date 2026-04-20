@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { getCatalogBrands } from '../lib/api/baskaroApi'
+import { getCatalogPhoneBrands } from '../lib/api/baskaroApi'
 
 /**
- * Active catalog brands from `GET /api/catalog/brands` (name, slug, sortOrder, …).
+ * Phone brands from `GET /api/catalog/phone-brands` (filters out accessories-only brands).
  */
 export function useCatalogBrands() {
   const [brands, setBrands] = useState([])
@@ -13,14 +13,22 @@ export function useCatalogBrands() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    getCatalogBrands()
+    getCatalogPhoneBrands()
       .then((list) => {
         if (cancelled) return
         const mapped = Array.isArray(list)
-          ? list.map((b) => ({
-              name: b.name || '',
-              logo: b.imageUrl || ''
-            })).filter(b => b.name)
+          ? list
+              .map((b) => {
+                const imageUrl = b.imageUrl || ''
+                return {
+                  name: b.name || '',
+                  slug: b.slug || '',
+                  logo: imageUrl,
+                  logoUrl: imageUrl,
+                  id: b._id != null ? String(b._id) : '',
+                }
+              })
+              .filter((b) => b.name)
           : []
         setBrands(mapped)
       })

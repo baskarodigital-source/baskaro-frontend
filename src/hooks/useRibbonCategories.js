@@ -21,7 +21,8 @@ export function useRibbonCategories() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [fromApi, setFromApi] = useState(false)
+  /** True after a successful GET — even when the list is empty (must not fall back to static demo categories). */
+  const [fetchOk, setFetchOk] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -29,12 +30,11 @@ export function useRibbonCategories() {
     try {
       const raw = await getRibbonCategories()
       const list = extractRibbonList(raw)
-      setCategories(list)
-      setFromApi(Array.isArray(list) && list.length > 0)
-      if (list.length === 0) setError(null)
+      setCategories(Array.isArray(list) ? list : [])
+      setFetchOk(true)
     } catch (e) {
       setCategories([])
-      setFromApi(false)
+      setFetchOk(false)
       setError(e)
     } finally {
       setLoading(false)
@@ -45,5 +45,5 @@ export function useRibbonCategories() {
     load()
   }, [load])
 
-  return { categories, loading, error, fromApi, refetch: load }
+  return { categories, loading, error, fetchOk, refetch: load }
 }

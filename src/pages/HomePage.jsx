@@ -10,6 +10,12 @@ const ACCESSORIES_OPTIONS = [
   'No charger / no box',
   'No accessories',
 ]
+const AGE_OPTIONS = [
+  { label: '0–6 months', months: 3 },
+  { label: '6–12 months', months: 9 },
+  { label: '1–2 years', months: 18 },
+  { label: '2–3 years', months: 30 },
+]
 const PAYMENT_METHODS = ['UPI', 'Bank Transfer']
 
 const inputClass =
@@ -59,6 +65,7 @@ export default function HomePage() {
   const [bodyCondition, setBodyCondition] = useState('Good')
   const [batteryHealth, setBatteryHealth] = useState('80% - 89%')
   const [accessories, setAccessories] = useState('Original charger only')
+  const [deviceAgeMonths, setDeviceAgeMonths] = useState(18)
 
   const [pickupDateTime, setPickupDateTime] = useState('')
   const [pickupAddress, setPickupAddress] = useState({
@@ -98,6 +105,7 @@ export default function HomePage() {
       bodyCondition,
       batteryHealth,
       accessories,
+      deviceAgeMonths,
     })
       .then((r) => {
         if (!cancelled) setEstimate(r && typeof r === 'object' ? r : null)
@@ -118,6 +126,7 @@ export default function HomePage() {
     bodyCondition,
     batteryHealth,
     accessories,
+    deviceAgeMonths,
   ])
 
   const statusIndex = order?.statusIndex ?? -1
@@ -299,6 +308,20 @@ export default function HomePage() {
                     setValue={setAccessories}
                     options={ACCESSORIES_OPTIONS}
                   />
+                  <div>
+                    <label className="mb-1 block text-xs font-bold">Device age</label>
+                    <select
+                      className={inputClass}
+                      value={deviceAgeMonths}
+                      onChange={(e) => setDeviceAgeMonths(Number(e.target.value))}
+                    >
+                      {AGE_OPTIONS.map((o) => (
+                        <option key={o.label} value={o.months}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <button
                   onClick={() => setStep('pickup')}
@@ -318,7 +341,13 @@ export default function HomePage() {
                   Base: ₹{estimate?.breakdown?.basePrice != null ? formatMoney(estimate.breakdown.basePrice) : '0'}
                 </p>
                 <p className="text-sm text-slate-600">
-                  Deduction: {estimate?.breakdown?.totalDeductionPct != null ? Math.round(estimate.breakdown.totalDeductionPct * 100) : 0}%
+                  Demand adj: ₹{estimate?.breakdown?.demandAdjusted != null ? formatMoney(estimate.breakdown.demandAdjusted) : '0'}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Depreciation: ₹{estimate?.breakdown?.depreciationInr != null ? formatMoney(estimate.breakdown.depreciationInr) : '0'}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Condition loss: ₹{estimate?.breakdown?.conditionLossInr != null ? formatMoney(estimate.breakdown.conditionLossInr) : '0'}
                 </p>
               </aside>
             </div>

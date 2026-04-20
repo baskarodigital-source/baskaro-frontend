@@ -52,7 +52,21 @@ function normalizePath(p) {
   return t.startsWith('/') ? t : `/${t}`
 }
 
-function normalizeDoc(doc, index) {
+/** Backend ribbon rows: use only saved `imageUrl` — do not swap in stock images by iconKey (or labels look custom but icons look like a different preset). */
+function normalizeApiDoc(doc, index) {
+  const imageUrl = typeof doc.imageUrl === 'string' && doc.imageUrl.trim() ? doc.imageUrl.trim() : ''
+  const iconKey = doc.iconKey || 'smartphone'
+  return {
+    _id: doc._id ?? doc.id ?? `cat-${index}`,
+    label: doc.label || 'Category',
+    iconKey,
+    path: normalizePath(doc.path),
+    imageUrl,
+  }
+}
+
+/** Static fallback list only: fill missing images from icon presets */
+function normalizeFallbackDoc(doc, index) {
   let imageUrl = typeof doc.imageUrl === 'string' && doc.imageUrl.trim() ? doc.imageUrl.trim() : ''
   const iconKey = doc.iconKey || 'smartphone'
   if (!imageUrl && FALLBACK_IMG_BY_ICON[iconKey]) {
@@ -83,7 +97,7 @@ function RibbonCategoryLink({ cat }) {
       className="group flex flex-col items-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
     >
       <div className="relative">
-        <div className="h-14 w-14 overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-slate-200/80 transition-all duration-300 group-hover:shadow-md sm:h-[4.5rem] sm:w-[4.5rem] lg:h-20 lg:w-20">
+        <div className="h-12 w-12 overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-slate-200/80 transition-all duration-300 group-hover:shadow-md sm:h-14 sm:w-14 lg:h-16 lg:w-16">
           {showImg ? (
             <img
               src={imageUrl}
@@ -106,7 +120,7 @@ function RibbonCategoryLink({ cat }) {
         </div>
         <div className="absolute inset-0 -z-10 rounded-full bg-blue-600/0 blur-lg transition-all duration-500 group-hover:bg-blue-600/5" />
       </div>
-      <span className="whitespace-nowrap text-center text-[10.5px] font-black tracking-tight text-slate-500 transition-colors duration-300 group-hover:text-slate-900 sm:text-[12px] lg:text-[13px]">
+      <span className="whitespace-nowrap text-center text-[10px] font-black tracking-tight text-slate-500 transition-colors duration-300 group-hover:text-slate-900 sm:text-[11px] lg:text-[12px]">
         {cat.label}
       </span>
     </Link>
@@ -118,11 +132,16 @@ function RibbonCategoryLink({ cat }) {
  */
 export function CategoryRibbon({ variant = 'bar' }) {
   const scrollRef = useRef(null)
-  const { categories: apiRows, loading, error, fromApi } = useRibbonCategories()
+  const { categories: apiRows, loading, error, fetchOk } = useRibbonCategories()
 
-  const apiNormalized = fromApi ? apiRows.map((d, i) => normalizeDoc(d, i)) : []
-  const fallbackNormalized = RIBBON_FALLBACK.map((x, i) => normalizeDoc(x, i))
-  const ribbonCategories = fromApi && apiNormalized.length > 0 ? apiNormalized : fallbackNormalized
+  const apiNormalized = fetchOk ? apiRows.map((d, i) => normalizeApiDoc(d, i)) : []
+  const fallbackNormalized = RIBBON_FALLBACK.map((x, i) => normalizeFallbackDoc(x, i))
+  const ribbonCategories = fetchOk ? apiNormalized : fallbackNormalized
+
+  /** API returned successfully but no active categories — hide strip instead of showing demo list */
+  if (!loading && fetchOk && ribbonCategories.length === 0) {
+    return null
+  }
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -140,8 +159,8 @@ export function CategoryRibbon({ variant = 'bar' }) {
 
   const outer =
     variant === 'embedded'
-      ? 'relative w-full rounded-2xl border border-slate-100 bg-[#f1f3f6] py-4 shadow-sm sm:py-5'
-      : 'relative w-full border-b border-slate-100 bg-[#f1f3f6] py-3.5 sm:py-5'
+      ? 'relative w-full rounded-2xl border border-slate-100 bg-[#f1f3f6] py-3 shadow-sm sm:py-4'
+      : 'relative w-full border-b border-slate-100 bg-[#f1f3f6] py-2.5 sm:py-3.5'
 
   return (
     <section className={outer} aria-label="Shop by category">
@@ -172,7 +191,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
 
           <div
             ref={scrollRef}
-            className="flex items-center gap-6 overflow-x-auto pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-10 md:justify-center lg:gap-14"
+            className="flex items-center gap-5 overflow-x-auto pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-8 md:justify-center lg:gap-12"
           >
             {loading
               ? displayList.map((_, i) => (
@@ -181,7 +200,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
                     className="flex flex-col items-center gap-2"
                     aria-hidden
                   >
-                    <div className="h-14 w-14 animate-pulse rounded-full bg-slate-200/90 sm:h-[4.5rem] sm:w-[4.5rem] lg:h-20 lg:w-20" />
+                    <div className="h-12 w-12 animate-pulse rounded-full bg-slate-200/90 sm:h-14 sm:w-14 lg:h-16 lg:w-16" />
                     <div className="h-3 w-16 animate-pulse rounded bg-slate-200/90 sm:w-20" />
                   </div>
                 ))

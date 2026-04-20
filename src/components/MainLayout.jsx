@@ -10,7 +10,7 @@ import { WhatsAppWidget } from './WhatsAppWidget'
 export function MainLayout({ children }) {
   const { pathname } = useLocation()
   const path = pathname.replace(/\/$/, '') || '/'
-  const slimLayout = path === '/login' || path === '/dashboard'
+  const slimLayout = path === '/login' || path === '/dashboard' || path === '/profile'
 
   useEffect(() => {
     const root = document.documentElement

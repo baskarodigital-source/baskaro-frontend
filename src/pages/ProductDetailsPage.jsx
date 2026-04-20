@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle } from 'lucide-react'
 import { useCart } from '../context/CartContext'
-import { getMobileModel } from '../lib/api/baskaroApi.js'
+import { getMobileModel, getOffers } from '../lib/api/baskaroApi.js'
 
 const CONDITION_GRADES = [
    { id: 'Fair', label: 'Fair', desc: 'Noticeable signs of use' },
@@ -12,14 +12,34 @@ const CONDITION_GRADES = [
 ]
 
 function specGroupsFromModel(model) {
-   const spec = model?.specifications || {}
-   const pairs = [
-      { k: 'Display', v: spec.display },
-      { k: 'Processor', v: spec.processor },
-      { k: 'Camera', v: spec.camera },
-      { k: 'Battery', v: spec.battery },
-      { k: 'OS', v: spec.os },
-   ].filter((x) => x.v && String(x.v).trim())
+   const spec = model?.specifications
+   if (!spec || typeof spec !== 'object') return []
+
+   const toLabel = (key) =>
+      String(key || '')
+         .replace(/[_-]+/g, ' ')
+         .replace(/([a-z])([A-Z])/g, '$1 $2')
+         .trim()
+         .replace(/^./, (c) => c.toUpperCase())
+
+   const formatValue = (v) => {
+      if (v === null || v === undefined) return ''
+      if (typeof v === 'string') return v.trim()
+      if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+      if (Array.isArray(v)) {
+         const items = v
+            .map((x) => (typeof x === 'string' ? x.trim() : typeof x === 'number' ? String(x) : ''))
+            .filter(Boolean)
+         return items.length ? items.join(', ') : JSON.stringify(v)
+      }
+      // object
+      try { return JSON.stringify(v) } catch { return String(v) }
+   }
+
+   const pairs = Object.entries(spec)
+      .map(([k, v]) => ({ k: toLabel(k), v: formatValue(v) }))
+      .filter((x) => x.k && x.v)
+
    if (!pairs.length) return []
    return [{ label: 'Specifications', specs: pairs }]
 }
@@ -29,6 +49,7 @@ export default function ProductDetailsPage() {
    const [model, setModel] = useState(null)
    const [loadErr, setLoadErr] = useState('')
    const [loading, setLoading] = useState(true)
+   const [offers, setOffers] = useState([])
    const [selectedImg, setSelectedImg] = useState(0)
    const [condition, setCondition] = useState('Superb')
    const [extendedWarranty, setExtendedWarranty] = useState(false)
@@ -41,10 +62,18 @@ export default function ProductDetailsPage() {
       let cancelled = false
       setLoading(true)
       setLoadErr('')
+      setOffers([])
       ;(async () => {
          try {
             const m = await getMobileModel(id)
             if (!cancelled) setModel(m)
+            try {
+               const o = await getOffers({ modelId: id })
+               const list = Array.isArray(o?.data) ? o.data : Array.isArray(o) ? o : []
+               if (!cancelled) setOffers(Array.isArray(list) ? list : [])
+            } catch {
+               if (!cancelled) setOffers([])
+            }
          } catch (e) {
             if (!cancelled) setLoadErr(e.message || 'Product not found')
          } finally {
@@ -266,7 +295,12 @@ export default function ProductDetailsPage() {
                                              <div className="h-1 w-6 bg-red-600 rounded-full" />
                                              <h4 className="text-[12px] font-black text-slate-900 uppercase tracking-[0.2em]">{group.label}</h4>
                                           </div>
-                                          <div className="space-y-3">
+                                          <div
+                                             className={[
+                                                'space-y-3 pr-2',
+                                                group.specs?.length > 5 ? 'max-h-72 overflow-y-auto' : '',
+                                             ].join(' ')}
+                                          >
                                              {group.specs.map((s, j) => (
                                                 <div key={j} className="flex flex-col gap-1 border-b border-slate-200/50 pb-2 last:border-b-0">
                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.k}</span>
@@ -415,23 +449,24 @@ export default function ProductDetailsPage() {
                         <button className="text-blue-600 text-[13px] font-bold hover:underline">View All</button>
                      </div>
                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                        {[
-                           { title: 'Bank Offer', desc: 'Flat ₹2000 Off on ICICI Bank Cards', code: 'ICICI2000' },
-                           { title: 'UPI Offer', desc: 'Get 5% Instant cashback up to ₹500', code: 'UPI500' },
-                           { title: 'Exchange Bonus', desc: 'Extra ₹1000 off on exchange', code: 'EXCHANGE10' }
-                        ].map((offer, i) => (
-                           <div key={i} className="min-w-[240px] p-4 rounded-2xl border-2 border-slate-100 bg-slate-50/20 flex flex-col gap-2 relative overflow-hidden group hover:border-red-100 transition-colors">
+                        {(offers.length ? offers : []).map((offer, i) => (
+                           <div key={offer?._id || i} className="min-w-[240px] p-4 rounded-2xl border-2 border-slate-100 bg-slate-50/20 flex flex-col gap-2 relative overflow-hidden group hover:border-red-100 transition-colors">
                               <div className="flex items-center gap-2">
                                  <div className="h-2 w-2 rounded-full bg-red-600" />
                                  <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">{offer.title}</span>
                               </div>
                               <p className="text-[13px] font-bold text-slate-600 leading-snug">{offer.desc}</p>
                               <div className="mt-2 flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
-                                 <span className="text-[12px] font-black text-slate-400 font-mono tracking-widest uppercase">{offer.code}</span>
+                                 <span className="text-[12px] font-black text-slate-400 font-mono tracking-widest uppercase">{offer.code || '—'}</span>
                                  <button className="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-red-700">Apply</button>
                               </div>
                            </div>
                         ))}
+                        {offers.length === 0 ? (
+                           <div className="min-w-[240px] p-4 rounded-2xl border-2 border-slate-100 bg-slate-50/20 text-[13px] font-bold text-slate-500">
+                              No offers right now.
+                           </div>
+                        ) : null}
                      </div>
                   </div>
 

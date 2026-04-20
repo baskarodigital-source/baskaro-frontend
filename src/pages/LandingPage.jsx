@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
 import { gPhoto } from '../constants/googleImages'
@@ -7,6 +7,7 @@ import { FlashDealsSection } from '../components/FlashDealsSection'
 import { ProductCard } from '../components/ProductCard'
 import { ServiceCard } from '../components/ServiceCard'
 import { TopSellingBrands, PHONE_BRAND_PORTALS } from '../components/TopBrandPortals'
+import { useCatalogBrands } from '../hooks/useCatalogBrands'
 
 // Import premium PNG assets for that "wow" effect
 import s25Front from '../assets/products/s25_titanium.jpg'
@@ -18,6 +19,12 @@ import iphone13Blue from '../assets/products/iphone13_blue.jpg'
 import promoVivoBanner from '../assets/banners/promo_vivo_banner.png'
 import promoOppoBanner from '../assets/banners/promo_oppo_banner.png'
 import promoRedmiBanner from '../assets/banners/promo_redmi_banner.png'
+import {
+  getBanners,
+  getCatalogModels,
+  getCatalogPhoneBrands,
+  getHomeServices,
+} from '../lib/api/baskaroApi.js'
 
 const TOP_NAV = [
   'All',
@@ -30,7 +37,7 @@ const TOP_NAV = [
 
 const SERVICES = [
   { label: 'Sell Phone', path: '/sell-phone' },
-  { label: 'Buy Phone', path: '/find-new-phone' },
+  { label: 'Buy Phone', path: '/marketplace' },
   { label: 'Repair Phone', path: '/repair-phone' },
   { label: 'Find New Phone', path: '/find-new-phone' },
   { label: 'Nearby Stores', path: '/nearby-stores' },
@@ -77,8 +84,8 @@ const OFFERS = [
   },
 ]
 
-/** Cashify-inspired hero carousel (split layout, no heavy gradients) */
-const HERO_CAROUSEL_SLIDES = [
+/** Fallback hero slides when API returns none or fails */
+const HERO_CAROUSEL_FALLBACK = [
   {
     id: 'sell',
     heading: 'Sell your smartphone',
@@ -86,7 +93,7 @@ const HERO_CAROUSEL_SLIDES = [
     cta: 'Sell now',
     ctaTo: '/sell-phone',
     bgClass: 'bg-red-50',
-    img: s25Back, // Using back view for 'Sell' to suggest detail
+    img: s25Back,
   },
   {
     id: 'buy',
@@ -95,7 +102,7 @@ const HERO_CAROUSEL_SLIDES = [
     cta: 'Shop deals',
     ctaTo: '/find-new-phone',
     bgClass: 'bg-blue-50',
-    img: s25Perspective, // "Wow" perspective shot
+    img: s25Perspective,
   },
   {
     id: 'exchange',
@@ -104,9 +111,69 @@ const HERO_CAROUSEL_SLIDES = [
     cta: 'Start exchange',
     ctaTo: '/sell-phone',
     bgClass: 'bg-slate-100',
-    img: iphone14Front, // iPhone is great for exchange context
+    img: iphone14Front,
   },
 ]
+
+function resolveHeroImageUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  const t = url.trim()
+  if (!t) return ''
+  if (/^https?:\/\//i.test(t) || t.startsWith('data:') || t.startsWith('/')) return t
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+  return base ? `${base}/${t.replace(/^\//, '')}` : t
+}
+
+function sanitizeHeroBgClass(raw) {
+  const s = raw != null ? String(raw).trim() : ''
+  if (/^bg-[a-z0-9]+(-[a-z0-9]+)*$/i.test(s) && s.length < 48) return s
+  return 'bg-blue-50'
+}
+
+function mapHeroBannersFromApi(list) {
+  if (!Array.isArray(list)) return []
+  return list
+    .map((b) => {
+      const id = b._id != null ? String(b._id) : b.id
+      const img = resolveHeroImageUrl(b.imageUrl)
+      const heading = b.title != null ? String(b.title).trim() : ''
+      if (!id || !heading || !img) return null
+      const subtext = b.subtitle != null ? String(b.subtitle).trim() : ''
+      const ctaRaw = b.buttonText != null ? String(b.buttonText).trim() : ''
+      return {
+        id,
+        heading,
+        subtext,
+        cta: ctaRaw || 'Learn more',
+        ctaTo: (b.redirectUrl != null ? String(b.redirectUrl).trim() : '') || '/',
+        bgClass: sanitizeHeroBgClass(b.bgClass),
+        img,
+      }
+    })
+    .filter(Boolean)
+}
+
+function HeroCtaLink({ to, className, children }) {
+  const href = to && String(to).trim() ? String(to).trim() : '/'
+  const external = /^https?:\/\//i.test(href)
+  if (external) {
+    return (
+      <a
+        href={href}
+        className={className}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    )
+  }
+  return (
+    <Link to={href} className={className}>
+      {children}
+    </Link>
+  )
+}
 
 const TRUST_TESTIMONIALS = [
   {
@@ -417,17 +484,7 @@ const SERVICE_THUMBS = {
   'Buy Smartwatches': BUY_SMARTWATCHES_IMAGE_URL,
 }
 
-// ─── New Branded Phones ─────────────────────────────────────────────────────
-const BRANDED_PHONE_BRANDS = [
-  { id: 'all', label: 'All' },
-  { id: 'apple', label: 'Apple' },
-  { id: 'samsung', label: 'Samsung' },
-  { id: 'oneplus', label: 'OnePlus' },
-  { id: 'xiaomi', label: 'Xiaomi' },
-  { id: 'vivo', label: 'Vivo' },
-  { id: 'oppo', label: 'Oppo' },
-]
-
+// ─── New Branded Phones (fallback cards) ─────────────────────────────────────
 const NEW_BRANDED_PHONES = [
   {
     id: 'iphone-16-pro',
@@ -538,10 +595,83 @@ const NEW_BRANDED_PHONES = [
 function BrandedPhonesSection() {
   const [activeBrand, setActiveBrand] = useState('all')
   const scrollerRef = useRef(null)
+  const [brands, setBrands] = useState([{ id: 'all', label: 'All', brandId: '' }])
+  const [phones, setPhones] = useState(NEW_BRANDED_PHONES)
+  const [loading, setLoading] = useState(true)
 
-  const filtered = activeBrand === 'all'
-    ? NEW_BRANDED_PHONES
-    : NEW_BRANDED_PHONES.filter((p) => p.brand === activeBrand)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const apiBrands = await getCatalogPhoneBrands()
+        const list = Array.isArray(apiBrands) ? apiBrands : []
+        const top = list.slice(0, 12).map((b) => ({
+          id: String(b.slug || b.name || '').toLowerCase().replace(/\s+/g, '-') || String(b._id),
+          label: b.name,
+          brandId: b._id,
+        }))
+        if (!cancelled && top.length) setBrands([{ id: 'all', label: 'All', brandId: '' }, ...top])
+
+        // Fetch models for first few brands (or all) to build cards.
+        const brandsToFetch = top.slice(0, 6)
+        const modelLists = await Promise.all(
+          brandsToFetch.map(async (b) => {
+            try {
+              const ms = await getCatalogModels({ brandId: b.brandId })
+              const arr = Array.isArray(ms) ? ms : []
+              return arr.map((m) => ({
+                id: String(m._id),
+                brand: b.id,
+                brandLabel: b.label,
+                name: m.modelName || m.name || '',
+                image: m.image || '',
+                priceInr:
+                  Array.isArray(m.storageVariants) && m.storageVariants.length
+                    ? Math.min(...m.storageVariants.map((v) => Number(v.basePrice) || Infinity))
+                    : Number(m.basePrice) || 0,
+                brandLogo: b.brandId ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
+                  `${b.id}.com`,
+                )}&sz=128` : '',
+              }))
+            } catch {
+              return []
+            }
+          }),
+        )
+        const flat = modelLists.flat().filter((x) => x.name)
+        if (!cancelled && flat.length) {
+          // convert to the card shape used below
+          setPhones(
+            flat.slice(0, 30).map((p, idx) => ({
+              id: p.id,
+              brand: p.brand,
+              name: p.name,
+              subtitle: p.brandLabel,
+              price: p.priceInr ? `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(p.priceInr)}` : '',
+              originalPrice: '',
+              discount: 0,
+              badge: idx < 6 ? 'New' : 'Popular',
+              badgeColor: idx < 6 ? 'bg-orange-500' : 'bg-indigo-600',
+              image: p.image || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=640&auto=format&fit=crop',
+              brandLogo: '',
+            })),
+          )
+        } else if (!cancelled) {
+          setPhones(NEW_BRANDED_PHONES)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const filtered =
+    activeBrand === 'all' ? phones : phones.filter((p) => String(p.brand) === String(activeBrand))
 
   const scrollCarousel = (dir) => {
     const el = scrollerRef.current
@@ -575,7 +705,7 @@ function BrandedPhonesSection() {
 
         {/* Brand filter pills */}
         <div className="mb-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {BRANDED_PHONE_BRANDS.map((b) => (
+          {brands.map((b) => (
             <button
               key={b.id}
               type="button"
@@ -615,10 +745,18 @@ function BrandedPhonesSection() {
             ref={scrollerRef}
             className="flex gap-4 overflow-x-auto pb-3 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:px-12"
           >
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={`sk-${i}`}
+                  className="h-[285px] w-[200px] shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white sm:w-[210px]"
+                />
+              ))
+            ) : null}
             {filtered.map((phone) => (
               <Link
                 key={phone.id}
-                to="/find-new-phone"
+                to={/^[a-f0-9]{24}$/i.test(String(phone.id)) ? `/product/${phone.id}` : '/marketplace'}
                 className="group relative flex w-[200px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-red-200 hover:shadow-lg sm:w-[210px]"
               >
                 {/* Badge */}
@@ -647,7 +785,7 @@ function BrandedPhonesSection() {
                   </h3>
 
                   <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-base font-extrabold text-slate-900">{phone.price}</span>
+                    <span className="text-base font-extrabold text-slate-900">{phone.price || ''}</span>
                     {phone.originalPrice && (
                       <span className="text-xs font-semibold text-slate-400 line-through">{phone.originalPrice}</span>
                     )}
@@ -1120,11 +1258,21 @@ function formatINR(value) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const [services, setServices] = useState(
+    SERVICES.map((s) => ({ ...s, imageUrl: SERVICE_THUMBS[s.label] ?? SERVICE_THUMBS['Sell Phone'] })),
+  )
+  const { brands: catalogBrands, loading: catalogBrandsLoading } = useCatalogBrands()
+  const topSellingBrands = useMemo(() => {
+    if (!catalogBrandsLoading && catalogBrands.length > 0) return catalogBrands
+    return PHONE_BRAND_PORTALS
+  }, [catalogBrandsLoading, catalogBrands])
+
   const [moreOpen, setMoreOpen] = useState(false)
   const [navDropdownOpen, setNavDropdownOpen] = useState(null)
 
+  const [heroSlides, setHeroSlides] = useState(HERO_CAROUSEL_FALLBACK)
   const [heroSlide, setHeroSlide] = useState(0)
-  const heroSlideCount = HERO_CAROUSEL_SLIDES.length
+  const heroSlideCount = heroSlides.length
   const [storePincode, setStorePincode] = useState('')
   const [trustSlide, setTrustSlide] = useState(0)
   const trustCount = TRUST_TESTIMONIALS.length
@@ -1144,6 +1292,51 @@ export default function LandingPage() {
     }, 3000)
     return () => window.clearInterval(id)
   }, [heroSlideCount])
+
+  useEffect(() => {
+    let cancelled = false
+    getHomeServices()
+      .then((list) => {
+        if (cancelled) return
+        const arr = Array.isArray(list) ? list : []
+        const mapped = arr
+          .map((s) => ({
+            label: s.label || '',
+            path: s.path || '',
+            imageUrl: s.imageUrl || '',
+          }))
+          .filter((s) => s.label && s.path)
+        if (mapped.length) {
+          setServices(
+            mapped.map((s) => ({
+              ...s,
+              imageUrl: s.imageUrl || SERVICE_THUMBS[s.label] || SERVICE_THUMBS['Sell Phone'],
+            })),
+          )
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    getBanners({ position: 'HOME_HERO' })
+      .then((list) => {
+        if (cancelled) return
+        const mapped = mapHeroBannersFromApi(Array.isArray(list) ? list : [])
+        if (mapped.length) {
+          setHeroSlides(mapped)
+          setHeroSlide(0)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!moreOpen) return
@@ -1211,7 +1404,7 @@ export default function LandingPage() {
                   transform: `translateX(-${(heroSlide * 100) / heroSlideCount}%)`,
                 }}
               >
-                {HERO_CAROUSEL_SLIDES.map((slide) => (
+                {heroSlides.map((slide) => (
                   <div
                     key={slide.id}
                     className={`box-border shrink-0 ${slide.bgClass}`}
@@ -1222,15 +1415,17 @@ export default function LandingPage() {
                         <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
                           {slide.heading}
                         </h2>
-                        <p className="mt-3 text-base text-slate-600 sm:text-lg">
-                          {slide.subtext}
-                        </p>
-                        <Link
+                        {slide.subtext ? (
+                          <p className="mt-3 text-base text-slate-600 sm:text-lg">
+                            {slide.subtext}
+                          </p>
+                        ) : null}
+                        <HeroCtaLink
                           to={slide.ctaTo}
                           className="mt-6 inline-flex rounded-full bg-red-600 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
                         >
                           {slide.cta}
-                        </Link>
+                        </HeroCtaLink>
                       </div>
                       <div className="flex flex-1 justify-center md:max-w-md lg:max-w-lg">
                         <img
@@ -1304,7 +1499,7 @@ export default function LandingPage() {
               role="tablist"
               aria-label="Carousel pagination"
             >
-              {HERO_CAROUSEL_SLIDES.map((slide, i) => (
+              {heroSlides.map((slide, i) => (
                 <button
                   key={slide.id}
                   type="button"
@@ -1330,7 +1525,7 @@ export default function LandingPage() {
       {/* Top Selling Brands Section */}
       <section className="w-full py-10 bg-white">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-          <TopSellingBrands brands={PHONE_BRAND_PORTALS} />
+          <TopSellingBrands brands={topSellingBrands} />
         </div>
       </section>
 
@@ -1344,16 +1539,12 @@ export default function LandingPage() {
 
           <div className="overflow-x-auto px-2 pt-2 pb-4 sm:px-3 [scrollbar-width:thin] [-ms-overflow-style:auto]">
             <div className="flex min-w-max gap-5">
-              {SERVICES.map((service) => (
+              {services.map((service) => (
                 <div
                   key={service.label}
                   className="w-[190px] shrink-0 sm:w-[200px] lg:w-[210px]"
                 >
-                  <ServiceCard
-                    label={service.label}
-                    path={service.path}
-                    thumbUrl={SERVICE_THUMBS[service.label] ?? SERVICE_THUMBS['Sell Phone']}
-                  />
+                  <ServiceCard label={service.label} path={service.path} thumbUrl={service.imageUrl} />
                 </div>
               ))}
             </div>

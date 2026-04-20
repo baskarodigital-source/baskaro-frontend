@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search,
@@ -12,12 +12,14 @@ import {
   UserCircle,
   Heart,
   ShoppingCart,
+  LogOut,
 } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getToken, getUser, isAdminUser } from '../lib/auth.js'
+import { getToken, getUser, logout } from '../lib/auth.js'
 
 export function LandingNavbar() {
+  const navigate = useNavigate()
   const { wishlistCount } = useWishlist()
   const { cartCount } = useCart()
   const [location] = useState('Gurgaon')
@@ -28,17 +30,12 @@ export function LandingNavbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [mobileSellOpen, setMobileSellOpen] = useState(false)
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
   const token = getToken()
   const user = getUser()
   const loggedIn = Boolean(token && user)
-  const accountHref = loggedIn ? (isAdminUser(user) ? '/admin' : '/dashboard') : '/login'
-  const accountLabel = loggedIn ? (isAdminUser(user) ? 'Admin' : 'Account') : 'Login'
-  const accountAriaLabel = loggedIn
-    ? isAdminUser(user)
-      ? 'Open admin dashboard'
-      : 'Open my account'
-    : 'Log in or register'
+  const accountAriaLabel = loggedIn ? 'Account menu' : 'Log in or register'
 
   useEffect(() => {
     if (
@@ -46,7 +43,8 @@ export function LandingNavbar() {
       !sellDesktopOpen &&
       !mobileMenuOpen &&
       !mobileSellOpen &&
-      !mobileMoreOpen
+      !mobileMoreOpen &&
+      !profileMenuOpen
     )
       return
 
@@ -70,6 +68,7 @@ export function LandingNavbar() {
         setMobileMoreOpen(false)
         setSellDesktopOpen(false)
         setPreOwnedDropdownOpen(false)
+        setProfileMenuOpen(false)
       }
     }
 
@@ -79,6 +78,7 @@ export function LandingNavbar() {
       setMoreDropdownOpen(false)
       setSellDesktopOpen(false)
       setPreOwnedDropdownOpen(false)
+      setProfileMenuOpen(false)
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -92,7 +92,7 @@ export function LandingNavbar() {
         document.documentElement.style.overflow = prevHtmlOverflow
       }
     }
-  }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, mobileMenuOpen, mobileSellOpen, mobileMoreOpen])
+  }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, mobileMenuOpen, mobileSellOpen, mobileMoreOpen, profileMenuOpen])
 
   return (
     <header className="sticky top-0 z-[100] w-full border-b border-white/10 bg-white/95 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/90">
@@ -155,13 +155,52 @@ export function LandingNavbar() {
           </div>
 
           {loggedIn ? (
-            <Link
-              to={accountHref}
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
-              aria-label={accountAriaLabel}
-            >
-              <UserCircle size={22} strokeWidth={2} aria-hidden />
-            </Link>
+            <div className="relative" data-topnav-dropdown="true">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
+                aria-label={accountAriaLabel}
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
+              >
+                <UserCircle size={22} strokeWidth={2} aria-hidden />
+              </button>
+              <AnimatePresence>
+                {profileMenuOpen && (
+                  <motion.div
+                    role="menu"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 top-full z-[120] mt-2 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
+                  >
+                    <Link
+                      role="menuitem"
+                      to="/profile"
+                      onClick={() => setProfileMenuOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-left text-[13px] font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                    >
+                      <UserCircle size={17} strokeWidth={2} aria-hidden />
+                      Profile
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileMenuOpen(false)
+                        logout()
+                        navigate('/')
+                      }}
+                      className="flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-left text-[13px] font-bold text-slate-700 hover:bg-rose-50 hover:text-red-600 transition-colors"
+                    >
+                      <LogOut size={17} strokeWidth={2} aria-hidden />
+                      Sign out
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           ) : (
             <Link
               to="/login"
@@ -361,15 +400,41 @@ export function LandingNavbar() {
             </div>
 
             <div className="border-t bg-slate-50/50 p-6">
-              <Link
-                to={accountHref}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-sm font-black text-white shadow-xl hover:bg-rose-600 transition-all active:scale-95"
-                aria-label={accountAriaLabel}
-              >
-                {loggedIn ? <UserCircle size={20} strokeWidth={2} aria-hidden /> : <LogIn size={18} aria-hidden />}
-                {loggedIn ? accountLabel : 'Login / Register'}
-              </Link>
+              {loggedIn ? (
+                <div className="flex flex-col gap-2">
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-sm font-black text-white shadow-xl hover:bg-rose-600 transition-all active:scale-95"
+                    aria-label="Open profile"
+                  >
+                    <UserCircle size={20} strokeWidth={2} aria-hidden />
+                    Profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      logout()
+                      navigate('/')
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white py-4 text-sm font-black text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all active:scale-95"
+                  >
+                    <LogOut size={18} aria-hidden />
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-sm font-black text-white shadow-xl hover:bg-rose-600 transition-all active:scale-95"
+                  aria-label="Log in or register"
+                >
+                  <LogIn size={18} aria-hidden />
+                  Login / Register
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

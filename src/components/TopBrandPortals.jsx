@@ -128,7 +128,7 @@ export function TopSellingBrands({
       el.removeEventListener('scroll', update)
       ro.disconnect()
     }
-  }, [])
+  }, [brands])
 
   const scrollPrev = () => {
     scrollerRef.current?.scrollBy({ left: -320, behavior: 'smooth' })
@@ -159,23 +159,33 @@ export function TopSellingBrands({
           ref={scrollerRef}
           className="flex flex-1 gap-5 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {brands.map((brand) => (
-            <Link
-              key={brand.name}
-              to={getHref(brand)}
-              className="group flex min-w-[90px] shrink-0 flex-col items-center text-center"
-            >
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-md">
-                <img
-                  src={brand.logoUrl}
-                  alt={brand.name}
-                  loading="lazy"
-                  className="h-10 w-10 object-contain"
-                />
-              </div>
-              <p className="mt-3 text-[11px] font-bold text-slate-500 group-hover:text-slate-900">{brand.name}</p>
-            </Link>
-          ))}
+          {brands.map((brand) => {
+            const logoSrc = brand.logoUrl || brand.logo || ''
+            const key = brand.id || brand.slug || brand.name
+            return (
+              <Link
+                key={key}
+                to={getHref(brand)}
+                className="group flex min-w-[90px] shrink-0 flex-col items-center text-center"
+              >
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:shadow-md">
+                  {logoSrc ? (
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      loading="lazy"
+                      className="h-10 w-10 object-contain"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[11px] font-black uppercase text-slate-500">
+                      {(brand.name || '?').slice(0, 2)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-3 text-[11px] font-bold text-slate-500 group-hover:text-slate-900">{brand.name}</p>
+              </Link>
+            )
+          })}
         </div>
         <button
           type="button"
