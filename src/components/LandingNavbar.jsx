@@ -112,32 +112,24 @@ export function LandingNavbar() {
         </div>
 
         <div className="relative hidden w-full max-w-2xl xl:block group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-600 transition-colors">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-600 transition-colors pointer-events-none">
             <Search size={19} strokeWidth={2.5} />
           </div>
           <input
-            className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-28 py-3 text-[14px] font-bold outline-none focus:border-rose-500/50 focus:bg-white focus:ring-8 focus:ring-rose-500/5 transition-all placeholder:text-slate-400/80 shadow-sm group-hover:bg-slate-50 transition-all font-inter"
+            className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-32 py-3 text-[14px] font-bold outline-none focus:border-rose-500/50 focus:bg-white focus:ring-8 focus:ring-rose-500/5 transition-all placeholder:text-slate-400/80 shadow-sm group-hover:bg-slate-50 font-inter"
             placeholder="Search for iPhone 16, Samsung S24 & more..."
             type="search"
           />
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-            <button
-              type="button"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white uppercase tracking-widest hover:bg-rose-600 transition-all shadow-md active:scale-95 group-focus-within:bg-rose-600"
-            >
-              Search
-            </button>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+            <div className="h-5 w-px bg-slate-300"></div>
+            <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-700 hover:text-rose-600 transition-colors cursor-pointer group/loc">
+              <MapPin size={15} className="text-rose-600 group-hover/loc:scale-110 transition-transform" />
+              <span>{location}</span>
+            </div>
           </div>
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
-          <button
-            type="button"
-            className="hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors lg:block"
-          >
-            <Bell size={19} />
-          </button>
-
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
@@ -147,12 +139,45 @@ export function LandingNavbar() {
             <Search size={19} />
           </button>
 
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="hidden items-center gap-2 sm:flex xl:hidden">
             <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-bold text-slate-700 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer group">
               <MapPin size={13} className="text-rose-600 group-hover:scale-110 transition-transform" />
               <span>{location}</span>
             </div>
           </div>
+
+          <Link
+            to="/cart"
+            className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
+            aria-label="Open cart"
+          >
+            <ShoppingCart size={18} />
+            {cartCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-slate-900 px-1 text-center text-[9px] font-black leading-[16px] text-white">
+                {cartCount}
+              </span>
+            ) : null}
+          </Link>
+
+          <Link
+            to="/wishlist"
+            className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
+            aria-label="Open wishlist"
+          >
+            <Heart size={18} />
+            {wishlistCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-rose-600 px-1 text-center text-[9px] font-black leading-[16px] text-white">
+                {wishlistCount}
+              </span>
+            ) : null}
+          </Link>
+
+          <button
+            type="button"
+            className="hidden rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5 lg:block"
+          >
+            <Bell size={18} />
+          </button>
 
           {loggedIn ? (
             <div className="relative" data-topnav-dropdown="true">
@@ -206,35 +231,9 @@ export function LandingNavbar() {
               to="/login"
               className="rounded-xl bg-slate-900 px-3 py-2 text-[12px] font-black text-white shadow-lg shadow-slate-900/10 hover:bg-rose-600 hover:shadow-rose-600/20 transition-all active:scale-95 sm:px-5 sm:text-sm"
             >
-              Login
+              Login/sign up
             </Link>
           )}
-
-          <Link
-            to="/wishlist"
-            className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
-            aria-label="Open wishlist"
-          >
-            <Heart size={18} />
-            {wishlistCount > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-rose-600 px-1 text-center text-[9px] font-black leading-[16px] text-white">
-                {wishlistCount}
-              </span>
-            ) : null}
-          </Link>
-
-          <Link
-            to="/cart"
-            className="relative rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 sm:p-2.5"
-            aria-label="Open cart"
-          >
-            <ShoppingCart size={18} />
-            {cartCount > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-slate-900 px-1 text-center text-[9px] font-black leading-[16px] text-white">
-                {cartCount}
-              </span>
-            ) : null}
-          </Link>
 
           <button
             type="button"

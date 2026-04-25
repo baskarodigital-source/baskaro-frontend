@@ -8,35 +8,21 @@ export function ServiceCard({ label, path, thumbUrl }) {
     <button
       type="button"
       onClick={() => navigate(path)}
-      className="group flex flex-col items-center justify-start rounded-2xl p-3 text-left transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02]"
+      className="group flex flex-col items-center justify-start transition-transform duration-300 hover:-translate-y-1"
     >
-      <div className="relative flex h-40 w-full max-w-[190px] items-center justify-center rounded-3xl bg-[#eaf3f2] ring-2 ring-transparent transition-all duration-200 group-hover:bg-[#dff0ee] group-hover:ring-red-200 group-hover:shadow-md">
+      <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-[2.5rem] bg-red-100 shadow-sm ring-1 ring-red-200 transition-all duration-300 group-hover:bg-red-600 group-hover:shadow-lg group-hover:ring-red-600">
         <img
           src={thumbUrl}
-          alt=""
+          alt={label}
           aria-hidden="true"
           loading="lazy"
-          className="h-36 w-36 object-contain"
+          className="h-2/3 w-2/3 object-contain transition-transform duration-500 group-hover:scale-110"
         />
-
-        {/* Hover arrow badge */}
-        <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-sm transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 scale-75">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M9 18l6-6-6-6"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
       </div>
 
-      <span className="mt-4 text-center text-sm font-bold text-slate-800 transition-colors duration-150 group-hover:text-red-700">
+      <span className="mt-3 text-center text-xs font-bold uppercase tracking-tight text-slate-600 transition-colors duration-300 group-hover:text-red-600 sm:text-[13px]">
         {label}
       </span>
     </button>
   )
 }
-

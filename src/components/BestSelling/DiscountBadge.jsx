@@ -14,9 +14,11 @@ export function DiscountBadge({ discount }) {
         : `${discount} OFF`
 
   return (
-    <span className="absolute left-2 top-2 rounded-full bg-red-500/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
-      {label}
-    </span>
+    <div className="absolute left-0 top-0 z-10">
+      <span className="bg-red-600 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-white">
+        {label}
+      </span>
+    </div>
   )
 }
 

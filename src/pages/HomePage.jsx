@@ -26,7 +26,25 @@ function formatMoney(n) {
 }
 
 export default function HomePage() {
-  const brands = useMemo(() => Object.keys(catalog), [])
+  const [catalog, setCatalog] = useState({})
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogErr, setCatalogErr] = useState(null)
+
+  useEffect(() => {
+    setCatalogLoading(true)
+    getCatalogStructure()
+      .then((data) => {
+        setCatalog(data || {})
+        setCatalogErr(null)
+      })
+      .catch((err) => {
+        console.error('Failed to load catalog:', err)
+        setCatalogErr('Failed to load catalog data.')
+      })
+      .finally(() => setCatalogLoading(false))
+  }, [])
+
+  const brands = useMemo(() => Object.keys(catalog), [catalog])
   const [step, setStep] = useState('select') // select -> estimate -> pickup -> confirm
   const [selectedBrand, setSelectedBrand] = useState(brands[0] ?? 'Apple')
   useEffect(() => {

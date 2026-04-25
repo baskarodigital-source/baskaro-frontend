@@ -8,6 +8,7 @@ import { ProductCard } from '../components/ProductCard'
 import { ServiceCard } from '../components/ServiceCard'
 import { TopSellingBrands, PHONE_BRAND_PORTALS } from '../components/TopBrandPortals'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
+import { BestSellingSection } from '../components/BestSelling/BestSellingSection'
 
 // Import premium PNG assets for that "wow" effect
 import s25Front from '../assets/products/s25_titanium.jpg'
@@ -88,30 +89,35 @@ const OFFERS = [
 const HERO_CAROUSEL_FALLBACK = [
   {
     id: 'sell',
-    heading: 'Sell your smartphone',
-    subtext: 'Best price guaranteed — free pickup at your doorstep',
-    cta: 'Sell now',
-    ctaTo: '/sell-phone',
-    bgClass: 'bg-red-50',
-    img: s25Back,
+    bgImg: '/hero/sell.png',
   },
   {
     id: 'buy',
-    heading: 'Certified pre-owned phones',
-    subtext: 'Warranty included · Save big on Apple, Samsung & more',
-    cta: 'Shop deals',
-    ctaTo: '/find-new-phone',
-    bgClass: 'bg-blue-50',
-    img: s25Perspective,
+    bgImg: '/hero/buy.png',
+  },
+  {
+    id: 'repair',
+    bgImg: '/hero/repair.png',
   },
   {
     id: 'exchange',
-    heading: 'Swap & upgrade',
-    subtext: 'Trade in your old phone for instant credit on your next buy',
-    cta: 'Start exchange',
-    ctaTo: '/sell-phone',
-    bgClass: 'bg-slate-100',
-    img: iphone14Front,
+    bgImg: '/hero/exchange.png',
+  },
+  {
+    id: 'accessories',
+    bgImg: '/hero/accessories.png',
+  },
+  {
+    id: 'bulk',
+    bgImg: '/hero/bulk.png',
+  },
+  {
+    id: 'security',
+    bgImg: '/hero/security.png',
+  },
+  {
+    id: 'app',
+    bgImg: '/hero/app.png',
   },
 ]
 
@@ -244,8 +250,8 @@ const MAJOR_BRANDS_STRIP = [
 
 function MajorBrandsMarquee({ className = '', fullBleed = false }) {
   const shell = fullBleed
-    ? 'overflow-hidden border-y border-white/15 bg-blue-700 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-    : 'overflow-hidden rounded-xl border border-slate-200/80 bg-blue-700 py-3.5 shadow-sm'
+    ? 'overflow-hidden border-y border-white/10 bg-blue-900 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+    : 'overflow-hidden rounded-2xl border border-gray-200 bg-blue-900 py-4 shadow-xl'
   return (
     <div
       className={[shell, className].join(' ')}
@@ -593,9 +599,9 @@ const NEW_BRANDED_PHONES = [
 ]
 
 function BrandedPhonesSection() {
-  const [activeBrand, setActiveBrand] = useState('all')
+  const [activeBrand, setActiveBrand] = useState('')
   const scrollerRef = useRef(null)
-  const [brands, setBrands] = useState([{ id: 'all', label: 'All', brandId: '' }])
+  const [brands, setBrands] = useState([])
   const [phones, setPhones] = useState(NEW_BRANDED_PHONES)
   const [loading, setLoading] = useState(true)
 
@@ -611,7 +617,10 @@ function BrandedPhonesSection() {
           label: b.name,
           brandId: b._id,
         }))
-        if (!cancelled && top.length) setBrands([{ id: 'all', label: 'All', brandId: '' }, ...top])
+        if (!cancelled && top.length) {
+          setBrands(top)
+          setActiveBrand(top[0].id)
+        }
 
         // Fetch models for first few brands (or all) to build cards.
         const brandsToFetch = top.slice(0, 6)
@@ -671,7 +680,7 @@ function BrandedPhonesSection() {
   }, [])
 
   const filtered =
-    activeBrand === 'all' ? phones : phones.filter((p) => String(p.brand) === String(activeBrand))
+    (!activeBrand || activeBrand === 'all') ? phones : phones.filter((p) => String(p.brand) === String(activeBrand))
 
   const scrollCarousel = (dir) => {
     const el = scrollerRef.current
@@ -680,21 +689,21 @@ function BrandedPhonesSection() {
   }
 
   return (
-    <section className="w-full py-10 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 border-y border-slate-100">
+    <section className="w-full py-6 bg-[#feeceb] border-y border-red-100">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         {/* Header */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900 sm:text-2xl">
-              🔥 New Branded Phones
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+              Newly Launched / Trending <span className="text-red-600">.</span>
             </h2>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
+            <p className="mt-2 text-sm font-medium text-gray-500">
               Latest flagship launches from top brands — all in one place
             </p>
           </div>
           <a
             href="/find-new-phone"
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold text-slate-700 shadow-sm transition hover:border-red-300 hover:text-red-700 hover:shadow-md"
+            className="inline-flex items-center gap-2 rounded-full bg-blue-900 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/25"
           >
             View All
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -704,17 +713,17 @@ function BrandedPhonesSection() {
         </div>
 
         {/* Brand filter pills */}
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mb-8 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {brands.map((b) => (
             <button
               key={b.id}
               type="button"
               onClick={() => setActiveBrand(b.id)}
               className={[
-                'shrink-0 rounded-full border px-4 py-1.5 text-xs font-bold transition-all duration-200',
+                'shrink-0 rounded-full border-2 px-5 py-2 text-xs font-bold transition-all duration-300',
                 activeBrand === b.id
-                  ? 'border-red-600 bg-red-600 text-white shadow-sm shadow-red-200'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-red-300 hover:text-red-700',
+                  ? 'border-blue-900 bg-blue-900 text-white shadow-md'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-blue-900 hover:text-blue-950',
               ].join(' ')}
             >
               {b.label}
@@ -743,67 +752,28 @@ function BrandedPhonesSection() {
 
           <div
             ref={scrollerRef}
-            className="flex gap-4 overflow-x-auto pb-3 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:px-12"
+            className="flex gap-4 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-hide sm:px-12"
           >
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={`sk-${i}`}
-                  className="h-[285px] w-[200px] shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white sm:w-[210px]"
+                  className="h-[285px] w-[260px] shrink-0 animate-pulse rounded-2xl border border-slate-200 bg-white"
                 />
               ))
             ) : null}
             {filtered.map((phone) => (
-              <Link
+              <ProductCard
                 key={phone.id}
-                to={/^[a-f0-9]{24}$/i.test(String(phone.id)) ? `/product/${phone.id}` : '/marketplace'}
-                className="group relative flex w-[200px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-red-200 hover:shadow-lg sm:w-[210px]"
-              >
-                {/* Badge */}
-                <span
-                  className={`absolute left-3 top-3 z-10 rounded-full px-2.5 py-1 text-[10px] font-extrabold text-white shadow ${phone.badgeColor}`}
-                >
-                  {phone.badge}
-                </span>
-
-
-                {/* Phone image */}
-                <div className="flex h-48 w-full items-center justify-center bg-gradient-to-b from-slate-100 to-white p-4">
-                  <img
-                    src={phone.image}
-                    alt={phone.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-
-                {/* Info */}
-                <div className="flex flex-1 flex-col p-3">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{phone.subtitle}</p>
-                  <h3 className="mt-0.5 text-sm font-extrabold leading-snug text-slate-900 line-clamp-2">
-                    {phone.name}
-                  </h3>
-
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-base font-extrabold text-slate-900">{phone.price || ''}</span>
-                    {phone.originalPrice && (
-                      <span className="text-xs font-semibold text-slate-400 line-through">{phone.originalPrice}</span>
-                    )}
-                  </div>
-                  {phone.discount && (
-                    <span className="mt-1 inline-flex w-fit rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">
-                      {phone.discount}% off
-                    </span>
-                  )}
-
-                  <button
-                    type="button"
-                    className="mt-3 w-full rounded-xl bg-red-600 py-2 text-xs font-extrabold text-white opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-red-700"
-                  >
-                    Buy Now
-                  </button>
-                </div>
-              </Link>
+                id={phone.id}
+                image={phone.image}
+                title={phone.name}
+                price={phone.price}
+                originalPrice={phone.originalPrice}
+                discount={phone.discount}
+                tag={[phone.badge, phone.subtitle].filter(Boolean)}
+                brand={phone.brand}
+              />
             ))}
 
             {/* Empty state when brand filter yields nothing */}
@@ -886,15 +856,18 @@ function CarouselSection({ title, viewAllText, products }) {
   }
 
   return (
-    <section className="w-full py-10">
+    <section className="w-full py-6 bg-[#feeceb] border-y border-red-100">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-extrabold text-slate-900">{title}</h2>
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+            {title} <span className="text-red-600">.</span>
+          </h2>
           <a
             href="#"
-            className="text-sm font-extrabold text-slate-600 hover:text-red-700"
+            className="inline-flex items-center gap-2 rounded-full bg-blue-900 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/25"
           >
             {viewAllText}
+            <ChevronRight size={14} strokeWidth={3} />
           </a>
         </div>
 
@@ -903,22 +876,22 @@ function CarouselSection({ title, viewAllText, products }) {
             type="button"
             onClick={() => scrollCarousel(-1)}
             aria-label="Scroll products left"
-            className="absolute left-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md backdrop-blur-sm transition hover:bg-white hover:text-red-700 sm:flex"
+            className="absolute -left-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-xl transition-all hover:scale-110 hover:border-blue-900 hover:bg-blue-900 hover:text-white sm:flex"
           >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <ChevronLeft className="h-6 w-6" aria-hidden />
           </button>
           <button
             type="button"
             onClick={() => scrollCarousel(1)}
             aria-label="Scroll products right"
-            className="absolute right-0 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md backdrop-blur-sm transition hover:bg-white hover:text-red-700 sm:flex"
+            className="absolute -right-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-xl transition-all hover:scale-110 hover:border-blue-900 hover:bg-blue-900 hover:text-white sm:flex"
           >
-            <ChevronRight className="h-5 w-5" aria-hidden />
+            <ChevronRight className="h-6 w-6" aria-hidden />
           </button>
 
           <div
             ref={scrollerRef}
-            className="flex gap-4 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:px-12"
+            className="flex gap-4 overflow-x-auto pb-2 pt-1 scrollbar-hide sm:px-12"
           >
             {products.map((p) => (
               <ProductCard key={p.title} {...p} />
@@ -932,17 +905,17 @@ function CarouselSection({ title, viewAllText, products }) {
 
 function PromoImageCard({ title, imageUrl }) {
   return (
-    <div className="w-[280px] shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-sm lg:w-[calc((100%-3rem)/4)]">
-      <div className="relative aspect-[16/10] w-full">
+    <div className="group w-[280px] shrink-0 overflow-hidden rounded-[1.25rem] bg-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-blue-900/10 lg:w-[calc((100%-3rem)/4)]">
+      <div className="relative aspect-[16/10] w-full overflow-hidden">
         <img
           src={imageUrl}
           alt={title}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-3">
-          <div className="text-[13px] font-extrabold leading-snug text-white line-clamp-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 via-blue-900/40 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-100" />
+        <div className="absolute inset-x-0 bottom-0 p-5 transform transition-transform duration-500 group-hover:-translate-y-1">
+          <div className="text-sm font-black leading-snug text-white line-clamp-2 drop-shadow-md">
             {title}
           </div>
         </div>
@@ -961,22 +934,24 @@ function PromoSliderRow({ title, cards, viewAllText = 'See all' }) {
   }
 
   return (
-    <section className="w-full py-8">
+    <section className="w-full py-12">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-extrabold text-slate-900">{title}</h2>
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+            {title}
+          </h2>
           <a
             href="#"
-            className="text-sm font-semibold text-blue-300 hover:text-blue-200"
+            className="text-sm font-bold text-gray-500 hover:text-blue-950 underline underline-offset-4 decoration-2 decoration-gray-200 hover:decoration-blue-900 transition-colors"
           >
             {viewAllText}
           </a>
         </div>
 
-        <div className="relative">
+        <div className="relative group/slider">
           <div
             ref={scrollerRef}
-            className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
+            className="flex gap-5 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent px-1"
           >
             {cards.map((c) => (
               <PromoImageCard key={c.title} title={c.title} imageUrl={c.imageUrl} />
@@ -987,11 +962,11 @@ function PromoSliderRow({ title, cards, viewAllText = 'See all' }) {
             type="button"
             onClick={onScrollRight}
             aria-label={`Scroll ${title} right`}
-            className="absolute right-1 top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 p-2 text-blue-700 shadow-sm hover:bg-white"
+            className="absolute -right-4 top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-xl opacity-0 transition-all duration-300 hover:scale-110 hover:border-blue-900 hover:bg-blue-900 hover:text-white group-hover/slider:opacity-100"
           >
             <svg
-              width="18"
-              height="18"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -1000,7 +975,7 @@ function PromoSliderRow({ title, cards, viewAllText = 'See all' }) {
               <path
                 d="M9 18l6-6-6-6"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -1049,18 +1024,18 @@ function FaqsSection() {
   const [openId, setOpenId] = useState(null)
 
   return (
-    <section className="w-full py-12">
-      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-6">
-          <h2 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">
-            FAQs
+    <section className="w-full py-16 bg-gray-50 border-t border-gray-200">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 max-w-5xl mx-auto">
+        <div className="mb-10 text-center">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+            Frequently Asked Questions <span className="text-red-600">.</span>
           </h2>
-          <p className="mt-2 text-sm font-semibold text-slate-500">
-            Quick answers about buying and selling pre-owned devices.
+          <p className="mt-3 text-sm font-bold uppercase tracking-widest text-gray-500">
+            Quick answers about buying and selling pre-owned devices
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {FAQS.map((item) => {
             const isOpen = item.id === openId
             const buttonId = `${item.id}-btn`
@@ -1068,7 +1043,7 @@ function FaqsSection() {
             return (
               <div
                 key={item.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                className={`overflow-hidden rounded-2xl border bg-white transition-all duration-300 ${isOpen ? 'border-blue-900 shadow-lg' : 'border-gray-200 hover:border-gray-300'}`}
               >
                 <button
                   id={buttonId}
@@ -1076,15 +1051,15 @@ function FaqsSection() {
                   onClick={() => setOpenId(isOpen ? null : item.id)}
                   aria-expanded={isOpen}
                   aria-controls={panelId}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors"
                 >
-                  <span className="text-sm font-extrabold text-slate-900 sm:text-base">
+                  <span className={`text-base font-black sm:text-lg ${isOpen ? 'text-blue-950' : 'text-gray-700'}`}>
                     {item.q}
                   </span>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ${isOpen ? 'bg-blue-900 text-white' : 'bg-gray-100 text-blue-950 group-hover:bg-gray-200'}`}>
                     <svg
-                      width="18"
-                      height="18"
+                      width="20"
+                      height="20"
                       viewBox="0 0 24 24"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
@@ -1094,7 +1069,7 @@ function FaqsSection() {
                         <path
                           d="M6 12h12"
                           stroke="currentColor"
-                          strokeWidth="2"
+                          strokeWidth="2.5"
                           strokeLinecap="round"
                         />
                       ) : (
@@ -1102,13 +1077,13 @@ function FaqsSection() {
                           <path
                             d="M12 6v12"
                             stroke="currentColor"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                             strokeLinecap="round"
                           />
                           <path
                             d="M6 12h12"
                             stroke="currentColor"
-                            strokeWidth="2"
+                            strokeWidth="2.5"
                             strokeLinecap="round"
                           />
                         </>
@@ -1122,14 +1097,14 @@ function FaqsSection() {
                   role="region"
                   aria-labelledby={buttonId}
                   className={[
-                    'grid transition-all',
+                    'grid transition-all duration-300 ease-in-out',
                     isOpen
-                      ? 'max-h-40 opacity-100 pb-4'
-                      : 'max-h-0 opacity-0 pb-0',
+                      ? 'grid-rows-[1fr] opacity-100 pb-5'
+                      : 'grid-rows-[0fr] opacity-0 pb-0',
                   ].join(' ')}
                 >
-                  <div className="px-5 text-sm font-semibold text-slate-600 sm:text-base">
-                    <div className="border-t border-slate-100 pt-3">
+                  <div className="overflow-hidden px-6 text-sm font-medium leading-relaxed text-gray-600 sm:text-base">
+                    <div className="border-t border-gray-100 pt-4">
                       {item.a}
                     </div>
                   </div>
@@ -1159,7 +1134,7 @@ function FeaturedArticleCard({ article }) {
           loading="lazy"
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 via-blue-900/35 to-black/10" />
       </div>
       <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
         <span
@@ -1256,6 +1231,131 @@ function formatINR(value) {
   }
 }
 
+function CategoryGridSection() {
+  const navigate = useNavigate()
+  const scrollRef = useRef(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(true)
+
+  const checkScroll = () => {
+    if (!scrollRef.current) return
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
+    setCanScrollLeft(scrollLeft > 2)
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2)
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    checkScroll()
+    el.addEventListener('scroll', checkScroll, { passive: true })
+    const ro = new ResizeObserver(checkScroll)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', checkScroll)
+      ro.disconnect()
+    }
+  }, [])
+
+  return (
+    <section className="w-full py-6 bg-white border-y border-gray-100">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+            Popular categories <span className="text-red-600">.</span>
+          </h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+              disabled={!canScrollLeft}
+              className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                canScrollLeft ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+              }`}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+              disabled={!canScrollRight}
+              className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                canScrollRight ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+              }`}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto pb-4 scroll-smooth scrollbar-hide"
+        >
+          {MORE_CATEGORIES.map((c) => (
+            <button
+              key={c.title}
+              type="button"
+              className="group flex min-w-[100px] shrink-0 flex-col items-center text-center sm:min-w-[120px]"
+              onClick={() => c.path && navigate(c.path)}
+            >
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 ring-1 ring-slate-100 transition-all duration-300 group-hover:scale-105 group-hover:bg-white group-hover:shadow-md group-hover:ring-red-100 sm:h-24 sm:w-24">
+                <img
+                  src={c.img}
+                  alt={c.title}
+                  className="h-10 w-10 object-contain transition-transform duration-500 group-hover:scale-110 sm:h-12 sm:w-12"
+                  loading="lazy"
+                />
+              </div>
+              <span className="mt-3 text-[11px] font-black uppercase tracking-widest text-slate-500 transition-colors group-hover:text-red-600 sm:text-xs">
+                {c.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PromoBannersSection() {
+  return (
+    <section className="w-full py-4 sm:py-6 bg-gray-100">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
+        <div className="flex gap-5 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
+          <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-2xl bg-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-blue-900/10 sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+            <img
+              src={promoVivoBanner}
+              alt="vivo T5x 5G"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-blue-900/0 transition-colors duration-500 group-hover:bg-blue-900/10" />
+          </Link>
+          <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-2xl bg-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-blue-900/10 sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+            <img
+              src={promoOppoBanner}
+              alt="OPPO A6 Pro 5G"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-blue-900/0 transition-colors duration-500 group-hover:bg-blue-900/10" />
+          </Link>
+          <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-2xl bg-gray-100 shadow-sm transition-all duration-500 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-blue-900/10 sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+            <img
+              src={promoRedmiBanner}
+              alt="REDMI Note 15 5G"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-blue-900/0 transition-colors duration-500 group-hover:bg-blue-900/10" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function LandingPage() {
   const navigate = useNavigate()
   const [services, setServices] = useState(
@@ -1276,6 +1376,56 @@ export default function LandingPage() {
   const [storePincode, setStorePincode] = useState('')
   const [trustSlide, setTrustSlide] = useState(0)
   const trustCount = TRUST_TESTIMONIALS.length
+
+  const servicesScrollRef = useRef(null)
+  const [canServicesLeft, setCanServicesLeft] = useState(false)
+  const [canServicesRight, setCanServicesRight] = useState(true)
+
+  const sellScrollRef = useRef(null)
+  const [canSellLeft, setCanSellLeft] = useState(false)
+  const [canSellRight, setCanSellRight] = useState(true)
+
+  const checkScroll = (ref, setLeft, setRight) => {
+    if (!ref.current) return
+    const { scrollLeft, scrollWidth, clientWidth } = ref.current
+    setLeft(scrollLeft > 2)
+    setRight(scrollLeft < scrollWidth - clientWidth - 2)
+  }
+
+  useEffect(() => {
+    const sEl = servicesScrollRef.current
+    const slEl = sellScrollRef.current
+
+    const handleServicesScroll = () => checkScroll(servicesScrollRef, setCanServicesLeft, setCanServicesRight)
+    const handleSellScroll = () => checkScroll(sellScrollRef, setCanSellLeft, setCanSellRight)
+
+    if (sEl) {
+      handleServicesScroll()
+      sEl.addEventListener('scroll', handleServicesScroll, { passive: true })
+      // use ResizeObserver in case of layout shifts
+      const ro = new ResizeObserver(handleServicesScroll)
+      ro.observe(sEl)
+      sEl._ro = ro
+    }
+    if (slEl) {
+      handleSellScroll()
+      slEl.addEventListener('scroll', handleSellScroll, { passive: true })
+      const ro = new ResizeObserver(handleSellScroll)
+      ro.observe(slEl)
+      slEl._ro = ro
+    }
+
+    return () => {
+      if (sEl) {
+        sEl.removeEventListener('scroll', handleServicesScroll)
+        if (sEl._ro) sEl._ro.disconnect()
+      }
+      if (slEl) {
+        slEl.removeEventListener('scroll', handleSellScroll)
+        if (slEl._ro) slEl._ro.disconnect()
+      }
+    }
+  }, [services])
 
   useEffect(() => {
     if (trustCount <= 1) return
@@ -1315,7 +1465,7 @@ export default function LandingPage() {
           )
         }
       })
-      .catch(() => {})
+      .catch(() => { })
     return () => {
       cancelled = true
     }
@@ -1332,7 +1482,7 @@ export default function LandingPage() {
           setHeroSlide(0)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
     return () => {
       cancelled = true
     }
@@ -1388,15 +1538,15 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-red-100 selection:text-red-900">
       {/* Hero Section */}
-      <section className="w-full pt-6 pb-2">
-        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
+      <section className="w-full py-0">
+        <div className="w-full">
           <div
             className="relative"
             role="region"
             aria-roledescription="carousel"
             aria-label="Featured offers"
           >
-            <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="overflow-hidden bg-white">
               <div
                 className="flex flex-nowrap transition-transform duration-500 ease-out motion-reduce:transition-none"
                 style={{
@@ -1404,117 +1554,67 @@ export default function LandingPage() {
                   transform: `translateX(-${(heroSlide * 100) / heroSlideCount}%)`,
                 }}
               >
-                {heroSlides.map((slide) => (
+                {heroSlides.map((slide, index) => (
                   <div
-                    key={slide.id}
-                    className={`box-border shrink-0 ${slide.bgClass}`}
+                    key={slide.id || index}
+                    className="relative box-border shrink-0 h-[250px] bg-red-600 overflow-hidden"
                     style={{ width: `${100 / heroSlideCount}%` }}
                   >
-                    <div className="flex flex-col items-stretch gap-8 px-6 py-10 sm:px-10 sm:py-12 md:flex-row md:items-center md:justify-between md:gap-10 md:px-12 md:py-14 lg:px-16">
-                      <div className="max-w-xl md:min-w-0 md:flex-1">
-                        <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-                          {slide.heading}
-                        </h2>
-                        {slide.subtext ? (
-                          <p className="mt-3 text-base text-slate-600 sm:text-lg">
-                            {slide.subtext}
-                          </p>
-                        ) : null}
-                        <HeroCtaLink
-                          to={slide.ctaTo}
-                          className="mt-6 inline-flex rounded-full bg-red-600 px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-                        >
-                          {slide.cta}
-                        </HeroCtaLink>
-                      </div>
-                      <div className="flex flex-1 justify-center md:max-w-md lg:max-w-lg">
-                        <img
-                          src={slide.img}
-                          alt=""
-                          className="h-44 w-auto max-w-full object-contain sm:h-52 md:h-56 lg:h-64"
-                          loading="lazy"
-                        />
-                      </div>
-                    </div>
+                    <img
+                      src={resolveHeroImageUrl(slide.bgImg || slide.img) || 'https://placehold.co/1200x250/e11d48/ffffff?text=Baskaro+Banner'}
+                      alt="Hero banner"
+                      className="h-full w-full object-cover"
+                    />
+                    {/* Carousel content removed to keep imagery 'untouched' */}
                   </div>
                 ))}
               </div>
             </div>
 
-            <button
-              type="button"
-              className="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 md:left-3"
-              aria-label="Previous slide"
-              onClick={() =>
-                setHeroSlide(
-                  (i) => (i - 1 + heroSlideCount) % heroSlideCount,
-                )
-              }
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
+            {/* Centered Navigation Bar */}
+            <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full bg-blue-900/40 px-3 py-1.5 backdrop-blur-md border border-white/20 shadow-2xl">
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/20 hover:text-white"
+                aria-label="Previous slide"
+                onClick={() =>
+                  setHeroSlide(
+                    (i) => (i - 1 + heroSlideCount) % heroSlideCount,
+                  )
+                }
               >
-                <path
-                  d="M15 18l-6-6 6-6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 md:right-3"
-              aria-label="Next slide"
-              onClick={() =>
-                setHeroSlide((i) => (i + 1) % heroSlideCount)
-              }
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  d="M9 18l6-6-6-6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
 
-            <div
-              className="mt-4 flex justify-center gap-2"
-              role="tablist"
-              aria-label="Carousel pagination"
-            >
-              {heroSlides.map((slide, i) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={i === heroSlide}
-                  aria-label={`Slide ${i + 1}: ${slide.heading}`}
-                  className={[
-                    'h-2 rounded-full transition-all duration-300',
-                    i === heroSlide
-                      ? 'w-8 bg-red-600'
-                      : 'w-2 bg-slate-300 hover:bg-slate-400',
-                  ].join(' ')}
-                  onClick={() => setHeroSlide(i)}
-                />
-              ))}
+              <div className="flex gap-2">
+                {heroSlides.map((_, i) => (
+                  <button
+                    key={`dot-${i}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={heroSlide === i}
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => setHeroSlide(i)}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${heroSlide === i ? 'w-6 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                      }`}
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/20 hover:text-white"
+                aria-label="Next slide"
+                onClick={() =>
+                  setHeroSlide((i) => (i + 1) % heroSlideCount)
+                }
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -1523,26 +1623,50 @@ export default function LandingPage() {
       <FlashDealsSection />
 
       {/* Top Selling Brands Section */}
-      <section className="w-full py-10 bg-white">
+      <section className="w-full pt-6 pb-2 bg-gradient-to-b from-white to-slate-50/50 border-b border-slate-100">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
           <TopSellingBrands brands={topSellingBrands} />
         </div>
       </section>
 
-      {/* Services — full-width band */}
-      <section className="w-full border-y border-slate-100 bg-slate-50 pt-10 pb-10">
-        <div className="w-full px-4 py-6 sm:px-6 sm:py-8 lg:px-10 xl:px-16">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-xl font-extrabold text-slate-900">Our Services</h2>
-            <span className="text-xs font-semibold text-slate-400">Tap to open →</span>
+      {/* Services Section */}
+      <section className="w-full pt-2 pb-4 bg-white overflow-hidden relative">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-white to-white opacity-60 pointer-events-none" />
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 relative z-10">
+          <div className="mb-10 flex items-center justify-between">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+              Our Services <span className="text-red-600">.</span>
+            </h2>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => servicesScrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                disabled={!canServicesLeft}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                  canServicesLeft ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+                }`}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => servicesScrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                disabled={!canServicesRight}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                  canServicesRight ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+                }`}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
 
-          <div className="overflow-x-auto px-2 pt-2 pb-4 sm:px-3 [scrollbar-width:thin] [-ms-overflow-style:auto]">
-            <div className="flex min-w-max gap-5">
+          <div ref={servicesScrollRef} className="overflow-x-auto pb-6 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-4 sm:gap-5">
               {services.map((service) => (
                 <div
                   key={service.label}
-                  className="w-[190px] shrink-0 sm:w-[200px] lg:w-[210px]"
+                  className="w-[140px] shrink-0 sm:w-[160px] lg:w-[180px]"
                 >
                   <ServiceCard label={service.label} path={service.path} thumbUrl={service.imageUrl} />
                 </div>
@@ -1553,22 +1677,45 @@ export default function LandingPage() {
       </section>
 
       {/* Sell Your Old Device Now */}
-      <section id="sell-your-device" className="w-full scroll-mt-20 pt-10 pb-16">
-        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
+      <section id="sell-your-device" className="w-full scroll-mt-20 pt-6 pb-8 bg-white border-y border-slate-100 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent opacity-80 pointer-events-none" />
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 relative z-10">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="mb-2 text-xl font-extrabold text-slate-900">
-                Sell Your Old Device Now
+              <h2 className="mb-3 text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+                Sell Your Old Device Now <span className="text-red-600">.</span>
               </h2>
-              <p className="text-sm font-semibold text-slate-600">
+              <p className="text-sm font-bold tracking-widest text-slate-400 uppercase mt-2">
                 Pick what you want to sell. We'll calculate an estimate.
               </p>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => sellScrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+                disabled={!canSellLeft}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                  canSellLeft ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+                }`}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => sellScrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+                disabled={!canSellRight}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+                  canSellRight ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
+                }`}
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
           </div>
 
           <div className="mt-8">
-            <div className="overflow-x-auto px-2 pt-2 pb-4 sm:px-3">
-              <div className="flex min-w-max gap-5">
+            <div ref={sellScrollRef} className="overflow-x-auto px-2 pt-2 pb-6 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-3">
+              <div className="flex min-w-max gap-6">
                 {[
                   {
                     title: 'Sell Phone',
@@ -1600,63 +1747,16 @@ export default function LandingPage() {
                     img: SERVICE_THUMBS['Nearby Stores'],
                     path: '/nearby-stores',
                   },
-                  {
-                    title: 'More',
-                    img: '',
-                    dots: true,
-                  },
                 ].map((card, idx) => (
-                  <div key={`${card.title}-${idx}`} className="w-[190px] shrink-0 sm:w-[200px]">
-                    <button
-                      type="button"
-                      className="group flex w-full flex-col items-center justify-start rounded-2xl border border-slate-100 bg-white p-3 transition hover:-translate-y-0.5 hover:shadow-md"
-                      onClick={() => {
-                        if (card.dots) setMoreOpen(true)
-                        else if (card.path) navigate(card.path)
-                      }}
-                    >
-                      <div className="relative flex h-40 w-full max-w-[190px] items-center justify-center rounded-3xl bg-[#eaf3f2] ring-2 ring-transparent transition-all duration-200 group-hover:bg-[#dff0ee] group-hover:ring-red-200 group-hover:shadow-md">
-                        {card.dots ? (
-                          <span className="flex items-center gap-1 text-xl text-slate-500">
-                            <span>•</span>
-                            <span>•</span>
-                            <span>•</span>
-                          </span>
-                        ) : (
-                          <img
-                            src={card.img}
-                            alt={card.title}
-                            className="h-36 w-36 object-contain"
-                            loading="lazy"
-                          />
-                        )}
-
-                        {/* Hover arrow badge */}
-                        {!card.dots ? (
-                          <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white opacity-0 shadow-sm transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 scale-75">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M9 18l6-6-6-6"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <span className="mt-4 text-center text-sm font-bold leading-tight text-slate-700">
-                        {card.title}
-                      </span>
-                    </button>
+                  <div
+                    key={`${card.title}-${idx}`}
+                    className="w-[140px] shrink-0 sm:w-[160px] lg:w-[180px]"
+                  >
+                    <ServiceCard
+                      label={card.title}
+                      path={card.path}
+                      thumbUrl={card.img}
+                    />
                   </div>
                 ))}
               </div>
@@ -1665,15 +1765,40 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── New Branded Phones (replaces Best Selling Phones) ── */}
+      {/* Best selling phones */}
+      <BestSellingSection
+        title="Best Selling Phones"
+        products={PRE_OWNED_DEVICES_CAROUSEL.map((p) => ({ ...p, name: p.title }))}
+      />
+
+      {/* Banners 1 */}
+      <PromoBannersSection />
+
+      {/* Popular categories */}
+      <CategoryGridSection />
+
+      {/* Newly launched and trending */}
       <BrandedPhonesSection />
+
+      {/* Banners 2 */}
+      <PromoBannersSection />
+
+      {/* Buy Pre-Owned Devices */}
+      <CarouselSection
+        title="Buy Pre-Owned Devices"
+        viewAllText="View All"
+        products={PRE_OWNED_DEVICES_CAROUSEL}
+      />
+
+      {/* Banners 3 */}
+      <PromoBannersSection />
 
       {/* Right-side "More" drawer */}
       {moreOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-blue-900/40"
             aria-label="Close sidebar"
             onClick={() => setMoreOpen(false)}
           />
@@ -1746,277 +1871,6 @@ export default function LandingPage() {
           </aside>
         </div>
       )}
-
-      {/* Buy Pre-Owned Devices */}
-      <CarouselSection
-        title="Buy Pre-Owned Devices"
-        viewAllText="View All"
-        products={PRE_OWNED_DEVICES_CAROUSEL}
-      />
-
-      {/* Promotional Banners */}
-      <section className="w-full py-6 sm:py-10">
-        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-          <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoVivoBanner}
-                alt="vivo T5x 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoOppoBanner}
-                alt="OPPO A6 Pro 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoRedmiBanner}
-                alt="REDMI Note 15 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust & social proof — full-width band + edge-to-edge partner strip */}
-      <section className="w-full bg-gradient-to-b from-slate-950 via-blue-950 to-slate-900 text-white">
-        <div className="w-full px-4 py-12 sm:px-6 md:py-16 lg:px-10 xl:px-16">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
-            <h2 className="max-w-2xl text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
-              Trusted by 176.02 Lac + Happy Users and Major Brands since 2015
-            </h2>
-            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap lg:shrink-0">
-              <div className="rounded-xl border border-white/10 bg-gradient-to-b from-zinc-800 to-zinc-950 px-5 py-4 sm:min-w-[168px]">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5">
-                  <span className="text-lg font-semibold text-blue-600">
-                    ₹
-                  </span>
-                </div>
-                <div className="mt-3 text-2xl font-bold tabular-nums text-blue-600">
-                  13201.65Cr.
-                </div>
-                <div className="mt-1 text-xs font-medium text-white/60">
-                  Cash Given
-                </div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-gradient-to-b from-zinc-800 to-zinc-950 px-5 py-4 sm:min-w-[168px]">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5">
-                  <svg
-                    className="h-5 w-5 text-blue-600"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M10 6h4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <div className="mt-3 text-2xl font-bold tabular-nums text-blue-600">
-                  195.58Lac
-                </div>
-                <div className="mt-1 text-xs font-medium text-white/60">
-                  Gadgets Encashed
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-10 hidden gap-5 lg:grid lg:grid-cols-4">
-            {TRUST_TESTIMONIALS.map((t) => (
-              <article
-                key={t.id}
-                className="flex flex-col rounded-xl bg-white p-5 text-slate-900 shadow-sm"
-              >
-                <span className="text-4xl font-serif leading-none text-blue-600">
-                  &ldquo;
-                </span>
-                <p className="mt-2 flex-1 text-sm leading-relaxed">{t.quote}</p>
-                <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-4">
-                  <img
-                    src={t.avatar}
-                    alt=""
-                    className="h-10 w-10 rounded-full object-cover"
-                    loading="lazy"
-                  />
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">
-                      {t.name}
-                    </div>
-                    <div className="text-xs text-slate-500">{t.location}</div>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="relative mt-10 lg:hidden">
-            <div className="overflow-hidden rounded-xl">
-              <div
-                className="flex flex-nowrap transition-transform duration-500 ease-out motion-reduce:transition-none"
-                style={{
-                  width: `${trustCount * 100}%`,
-                  transform: `translateX(-${(trustSlide * 100) / trustCount}%)`,
-                }}
-              >
-                {TRUST_TESTIMONIALS.map((t) => (
-                  <div
-                    key={t.id}
-                    className="box-border shrink-0 px-1"
-                    style={{ width: `${100 / trustCount}%` }}
-                  >
-                    <article className="flex h-full min-h-[220px] flex-col rounded-xl bg-white p-5 text-slate-900 shadow-sm">
-                      <span className="text-4xl font-serif leading-none text-blue-600">
-                        &ldquo;
-                      </span>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed">
-                        {t.quote}
-                      </p>
-                      <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-4">
-                        <img
-                          src={t.avatar}
-                          alt=""
-                          className="h-10 w-10 rounded-full object-cover"
-                          loading="lazy"
-                        />
-                        <div>
-                          <div className="text-sm font-bold text-slate-900">
-                            {t.name}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {t.location}
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="absolute -right-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-md hover:bg-slate-50"
-              aria-label="Next testimonial"
-              onClick={() =>
-                setTrustSlide((i) => (i + 1) % trustCount)
-              }
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  d="M9 18l6-6-6-6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-            <div className="mt-4 flex justify-center gap-2">
-              {TRUST_TESTIMONIALS.map((t, i) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  aria-label={`Go to testimonial ${i + 1}`}
-                  className={[
-                    'h-2 rounded-full transition-all',
-                    i === trustSlide
-                      ? 'w-8 bg-blue-600'
-                      : 'w-2 bg-white/30 hover:bg-white/50',
-                  ].join(' ')}
-                  onClick={() => setTrustSlide(i)}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Edge-to-edge partner strip (full viewport width) */}
-        <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 border-t border-white/10">
-          <MajorBrandsMarquee fullBleed className="w-full" />
-        </div>
-      </section>
-
-      {/* Image promo sliders */}
-      <PromoSliderRow
-        title="Better For Pocket. Buy Pre-Owned"
-        viewAllText="See all"
-        cards={[
-          {
-            title: 'Apple iPhone 13 Mini Pre-Owned Deal...',
-            imageUrl: iphone13Blue,
-          },
-          {
-            title: 'Get Pre-Owned Bose Portable Smart Speaker with...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Mobile%20Phone.jpg',
-          },
-          {
-            title: 'Best Deal On Pre-Owned Xiaomi Redmi Note 11...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Smartphone.png',
-          },
-          {
-            title: 'Get Pre-Owned Samsung Galaxy S20 FE under...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Hand%20holding%20Smartphone.jpg',
-          },
-        ]}
-      />
-
-      <PromoSliderRow
-        title="Be Smart. Sell Smart"
-        viewAllText="See all"
-        cards={[
-          {
-            title: '512GB Phones: The Sweet Spot For Res...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Hand%20holding%20Smartphone.jpg',
-          },
-          {
-            title: 'Why iPhones Hold 15% More Resale Valu...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Apple_iPhone.png',
-          },
-          {
-            title: "Verify Your Phone’s Clean Status Before...",
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Mobile%20Phone.jpg',
-          },
-          {
-            title: '3 Steps to Ensure Your Digital...',
-            imageUrl:
-              'https://commons.wikimedia.org/wiki/Special:FilePath/Smartphone.png',
-          },
-        ]}
-      />
-
-      <FaqsSection />
-
-      <DownloadAppSection />
     </div>
   )
 }

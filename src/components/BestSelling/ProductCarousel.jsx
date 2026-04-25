@@ -27,7 +27,7 @@ export function ProductCarousel({
   return (
     <div
       ref={scrollerRef}
-      className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+      className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 scrollbar-hide sm:gap-6"
     >
       {isLoading
         ? Array.from({ length: skeletonCount }).map((_, i) => (

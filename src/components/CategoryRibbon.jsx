@@ -97,20 +97,20 @@ function RibbonCategoryLink({ cat }) {
       className="group flex flex-col items-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
     >
       <div className="relative">
-        <div className="h-12 w-12 overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-slate-200/80 transition-all duration-300 group-hover:shadow-md sm:h-14 sm:w-14 lg:h-16 lg:w-16">
+        <div className="h-12 w-12 overflow-hidden rounded-full bg-white shadow-md ring-2 ring-white/20 transition-all duration-300 group-hover:ring-white/50 sm:h-14 sm:w-14 lg:h-16 lg:w-16">
           {showImg ? (
             <img
               src={imageUrl}
               alt={cat.label}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
               loading="lazy"
               onError={() => setImgFailed(true)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center p-2">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-slate-50 to-slate-100 ring-1 ring-slate-200/80 transition-transform duration-300 group-hover:scale-105 group-hover:from-rose-50/80 group-hover:to-slate-50">
+              <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-white to-slate-50 ring-1 ring-slate-100 transition-transform duration-300 group-hover:scale-105">
                 <Icon
-                  className="h-[42%] w-[42%] text-slate-700 transition-colors group-hover:text-rose-600 sm:h-[44%] sm:w-[44%]"
+                  className="h-[42%] w-[42%] text-red-600 transition-colors sm:h-[44%] sm:w-[44%]"
                   strokeWidth={1.75}
                   aria-hidden
                 />
@@ -118,9 +118,9 @@ function RibbonCategoryLink({ cat }) {
             </div>
           )}
         </div>
-        <div className="absolute inset-0 -z-10 rounded-full bg-blue-600/0 blur-lg transition-all duration-500 group-hover:bg-blue-600/5" />
+        <div className="absolute inset-0 -z-10 rounded-full bg-white/0 blur-lg transition-all duration-500 group-hover:bg-white/10" />
       </div>
-      <span className="whitespace-nowrap text-center text-[10px] font-black tracking-tight text-slate-500 transition-colors duration-300 group-hover:text-slate-900 sm:text-[11px] lg:text-[12px]">
+      <span className="whitespace-nowrap text-center text-[10px] font-bold tracking-tight text-white/90 transition-colors duration-300 group-hover:text-white sm:text-[11px] lg:text-[12px]">
         {cat.label}
       </span>
     </Link>
@@ -159,8 +159,8 @@ export function CategoryRibbon({ variant = 'bar' }) {
 
   const outer =
     variant === 'embedded'
-      ? 'relative w-full rounded-2xl border border-slate-100 bg-[#f1f3f6] py-3 shadow-sm sm:py-4'
-      : 'relative w-full border-b border-slate-100 bg-[#f1f3f6] py-2.5 sm:py-3.5'
+      ? 'relative w-full rounded-2xl border border-red-700 bg-red-600 py-3 shadow-lg sm:py-4'
+      : 'relative w-full border-b border-red-700 bg-red-600 py-2.5 sm:py-3.5'
 
   return (
     <section className={outer} aria-label="Shop by category">
@@ -174,7 +174,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
           <button
             type="button"
             onClick={() => scroll('left')}
-            className="absolute -left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 opacity-0 shadow-lg ring-1 ring-slate-200 transition-all hover:scale-105 group-hover:opacity-100 sm:h-10 sm:w-10 lg:-left-4"
+            className="absolute -left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-red-600 opacity-0 shadow-xl ring-1 ring-red-100 transition-all hover:scale-110 group-hover:opacity-100 sm:h-10 sm:w-10 lg:-left-4"
             aria-label="Scroll categories left"
           >
             <ChevronLeft size={20} />
@@ -183,7 +183,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
           <button
             type="button"
             onClick={() => scroll('right')}
-            className="absolute -right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-800 opacity-0 shadow-lg ring-1 ring-slate-200 transition-all hover:scale-105 group-hover:opacity-100 sm:h-10 sm:w-10 lg:-right-4"
+            className="absolute -right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-red-600 opacity-0 shadow-xl ring-1 ring-red-100 transition-all hover:scale-110 group-hover:opacity-100 sm:h-10 sm:w-10 lg:-right-4"
             aria-label="Scroll categories right"
           >
             <ChevronRight size={20} />

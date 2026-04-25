@@ -22,10 +22,13 @@ export function SectionHeader({
   viewAllLabel = 'View All',
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <h2 className="text-lg font-semibold tracking-tight text-slate-900">
-        {title}
-      </h2>
+    <div className="flex items-end justify-between gap-4">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+          {title}
+        </h2>
+        <div className="mt-1 h-[3px] w-[50px] bg-red-600" />
+      </div>
 
       <div className="flex items-center gap-3">
         {viewAllHref ? (
