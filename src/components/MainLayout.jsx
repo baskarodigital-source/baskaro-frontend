@@ -36,7 +36,7 @@ export function MainLayout({ children }) {
       <CategoryRibbon variant="bar" />
       {children}
       <WhatsAppWidget />
-      <footer className="border-t border-blue-800/90 bg-gradient-to-b from-blue-900 via-blue-950 to-slate-950 text-blue-100">
+      <footer className="border-t border-red-900/50 bg-gradient-to-b from-red-950 via-zinc-950 to-black text-red-100">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
           <div className="grid gap-8 md:grid-cols-4">
             <div>
@@ -45,14 +45,14 @@ export function MainLayout({ children }) {
                 alt="BAS karo"
                 className="ml-2 h-10 w-auto max-w-[180px] object-contain object-left drop-shadow-sm"
               />
-              <p className="mt-2 text-sm font-semibold text-blue-200/90">
+              <p className="mt-2 text-sm font-semibold text-red-200/90">
                 Buy and sell pre-owned mobiles with confidence.
               </p>
             </div>
 
             <div>
               <h3 className="text-sm font-extrabold text-white">Services</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-blue-200/95">
+              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
                 <a className="block transition-colors hover:text-white" href="/sell-phone">
                   Sell Phone
                 </a>
@@ -73,7 +73,7 @@ export function MainLayout({ children }) {
 
             <div>
               <h3 className="text-sm font-extrabold text-white">Company</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-blue-200/95">
+              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
                 <a className="block transition-colors hover:text-white" href="#">
                   About Us
                 </a>
@@ -91,7 +91,7 @@ export function MainLayout({ children }) {
 
             <div>
               <h3 className="text-sm font-extrabold text-white">Help & Support</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-blue-200/95">
+              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
                 <a className="block transition-colors hover:text-white" href="#">
                   FAQ
                 </a>
@@ -109,7 +109,7 @@ export function MainLayout({ children }) {
 
             <div>
               <h3 className="text-sm font-extrabold text-white">Portal</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-blue-200/95">
+              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
                 <Link className="block transition-colors hover:text-white" to="/login" state={{ redirectTo: '/admin' }}>
                   Admin Login
                 </Link>
@@ -117,7 +117,7 @@ export function MainLayout({ children }) {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-blue-800/70 pt-6 text-center text-xs font-semibold text-blue-300/80 sm:text-left">
+          <div className="mt-10 border-t border-red-900/30 pt-6 text-center text-xs font-semibold text-red-300/80 sm:text-left">
             Copyright &copy; {new Date().getFullYear()} BAS karo. All rights reserved.
           </div>
         </div>
