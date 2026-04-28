@@ -95,55 +95,51 @@ export function LandingNavbar() {
   }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, mobileMenuOpen, mobileSellOpen, mobileMoreOpen, profileMenuOpen])
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-white/10 bg-white/95 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/90">
-      <div className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:px-6 md:h-20 lg:px-12">
-        <div className="flex flex-1 items-center justify-start">
+    <header className="sticky top-0 z-[100] w-full border-b border-slate-100 bg-white/95 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-white/90">
+      <div className="flex h-16 w-full items-center gap-4 px-4 sm:px-6 md:h-20 lg:px-12">
+        {/* Logo & Search Area */}
+        <div className="flex items-center gap-8 flex-1">
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2 group transition-transform hover:scale-105 active:scale-95"
+            className="flex shrink-0 items-center transition-transform hover:scale-105"
             aria-label="BASkaro home"
           >
             <img
               src="/logo.png"
               alt="BAS karo"
-              className="h-10 w-auto object-contain object-left sm:h-11 md:h-12 lg:h-14 transition-all"
+              className="h-8 w-auto object-contain sm:h-10 md:h-12"
             />
           </Link>
-        </div>
 
-        <div className="relative hidden w-full max-w-2xl xl:block group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-rose-600 transition-colors pointer-events-none">
-            <Search size={19} strokeWidth={2.5} />
-          </div>
-          <input
-            className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 pl-12 pr-32 py-3 text-[14px] font-bold outline-none focus:border-rose-500/50 focus:bg-white focus:ring-8 focus:ring-rose-500/5 transition-all placeholder:text-slate-400/80 shadow-sm group-hover:bg-slate-50 font-inter"
-            placeholder="Search for iPhone 16, Samsung S24 & more..."
-            type="search"
-          />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-            <div className="h-5 w-px bg-slate-300"></div>
-            <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-700 hover:text-rose-600 transition-colors cursor-pointer group/loc">
-              <MapPin size={15} className="text-rose-600 group-hover/loc:scale-110 transition-transform" />
-              <span>{location}</span>
+          {/* Search Bar (Desktop) */}
+          <div className="hidden flex-1 md:block max-w-xl">
+            <div className="relative group">
+              <input
+                className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-2.5 pr-12 text-sm transition-all focus:border-rose-500 focus:bg-white focus:ring-4 focus:ring-rose-500/5 outline-none placeholder:text-slate-400 font-medium"
+                placeholder="Search for TV, Mobiles, Headphones & more"
+                type="search"
+              />
+              <button className="absolute right-0 top-0 h-full px-4 text-slate-400 hover:text-rose-600 transition-colors">
+                <Search size={20} />
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
+        {/* Right Side Actions (Restored) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-4">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors xl:hidden"
+            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors md:hidden"
             aria-label="Toggle search"
           >
             <Search size={19} />
           </button>
 
-          <div className="hidden items-center gap-2 sm:flex xl:hidden">
-            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-bold text-slate-700 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer group">
-              <MapPin size={13} className="text-rose-600 group-hover:scale-110 transition-transform" />
-              <span>{location}</span>
-            </div>
+          <div className="hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-bold text-slate-700 hover:border-rose-200 hover:bg-rose-50 transition-colors cursor-pointer group sm:flex">
+            <MapPin size={13} className="text-rose-600 group-hover:scale-110 transition-transform" />
+            <span>{location}</span>
           </div>
 
           <Link
@@ -246,89 +242,40 @@ export function LandingNavbar() {
         </div>
       </div>
 
-      {/* Mobile Search Overlay */}
-      <AnimatePresence>
-        {mobileSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute inset-x-0 top-full z-[110] border-b border-slate-100 bg-white p-4 shadow-xl xl:hidden"
+      {/* Full-width Category Bar */}
+      <nav className="hidden border-t border-slate-100 bg-white md:block">
+        <div className="flex w-full items-center gap-8 px-4 py-3 sm:px-6 lg:px-12">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="text-slate-600 hover:text-rose-600 transition-colors"
           >
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                autoFocus
-                type="search"
-                placeholder="Search phones..."
-                className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-bold outline-none focus:border-rose-500 focus:bg-white transition-all"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Menu size={22} />
+          </button>
 
-      <nav className="w-full border-t border-slate-100 bg-white hidden md:block">
-        <div className="flex w-full items-center justify-center gap-2 px-4 py-2 sm:px-6 md:gap-3 lg:gap-5 lg:px-6 xl:gap-8 xl:px-12">
-          <div className="flex items-center gap-0.5 md:gap-1 lg:gap-2">
+          <div className="flex flex-1 items-center gap-8 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[
-              { label: 'Home', path: '/' },
-              { label: 'Sell Phone', path: '/sell-phone' },
-              { label: 'Buy Pre-Owned', path: '/marketplace' },
-              { label: `Wishlist${wishlistCount ? ` (${wishlistCount})` : ''}`, path: '/wishlist' },
-              { label: 'Find New Phone', path: '/find-new-phone' },
-              { label: 'Repairs', path: '/repair-phone' },
-              { label: 'Store Locator', path: '/nearby-stores' },
+              { label: 'Mobiles', path: '/marketplace?categoryId=mobiles' },
+              { label: 'Electronics', path: '/marketplace?categoryId=electronics' },
+              { label: 'TV, AC & Appliances', path: '/marketplace?categoryId=tv' },
+              { label: 'Kitchen & Home', path: '/marketplace?categoryId=kitchen' },
+              { label: 'Health & Wellness', path: '/marketplace?categoryId=health' },
+              { label: 'Fashion', path: '/marketplace?categoryId=fashion' },
+              { label: 'Baby & Kids', path: '/marketplace?categoryId=baby' },
+              { label: 'Sports & Fitness', path: '/marketplace?categoryId=sports' },
             ].map((item) => (
               <Link
                 key={item.label}
                 to={item.path}
-                className="px-2 py-2 text-[13px] font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all tracking-tight whitespace-nowrap md:px-2.5 lg:px-3"
+                className="whitespace-nowrap text-[13px] font-bold text-slate-600 hover:text-rose-600 transition-colors"
               >
                 {item.label}
               </Link>
             ))}
-
-            <div className="relative" data-topnav-dropdown="true">
-              <button
-                type="button"
-                onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-                className="px-4 py-2 text-[13px] font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all tracking-tight flex items-center gap-1"
-              >
-                <span>MORE</span>
-                <ChevronRight size={14} className={moreDropdownOpen ? 'rotate-90' : ''} />
-              </button>
-
-              <AnimatePresence>
-                {moreDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full z-[120] mt-3 w-64 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
-                  >
-                    {[
-                      { label: 'About Us', path: '/about' },
-                      { label: 'Warranty Policy', path: '/warranty-policy' },
-                      { label: 'Refer & Earn', path: '/refer-earn' },
-                      { label: 'Careers', path: '/careers' },
-                      { label: 'Press Releases', path: '/press-releases' },
-                    ].map((sub) => (
-                      <Link
-                        key={sub.label}
-                        to={sub.path}
-                        className="block w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
-                      >
-                        {sub.label}
-                      </Link>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </div>
         </div>
       </nav>
+
+
 
       <AnimatePresence>
         {mobileMenuOpen && (
