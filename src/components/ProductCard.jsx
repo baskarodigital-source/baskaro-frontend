@@ -99,13 +99,13 @@ export function ProductCard({
       <div className="flex flex-col items-center text-center px-2 pb-2">
         <h3
           title={title}
-          className="line-clamp-2 min-h-[2.5rem] text-[16px] font-bold leading-tight tracking-tight text-[#1e1b4b] transition-colors group-hover:text-blue-600"
+          className="line-clamp-2 min-h-[2.5rem] text-[16px] font-bold leading-tight tracking-tight text-[#1e1b4b] transition-colors group-hover:text-red-600"
         >
           {title}
         </h3>
 
         <div className="mt-2 flex items-center justify-center gap-2">
-          <span className="text-xl font-bold text-[#0070c1]">{price}</span>
+          <span className="text-xl font-bold text-red-600">{price}</span>
           {showOriginal ? (
             <span className="text-sm font-medium text-slate-400 line-through">
               {originalPrice}

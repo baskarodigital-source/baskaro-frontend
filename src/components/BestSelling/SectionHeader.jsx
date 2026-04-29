@@ -24,7 +24,7 @@ export function SectionHeader({
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+        <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
           {title}
         </h2>
         <div className="mt-1 h-[3px] w-[50px] bg-red-600" />
@@ -48,8 +48,8 @@ export function SectionHeader({
           className={[
             'flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300 active:scale-95 sm:h-10 sm:w-10',
             canPrev
-              ? 'bg-gray-100 text-slate-700 shadow-sm hover:bg-gray-200 hover:shadow-md active:bg-gray-300'
-              : 'cursor-not-allowed bg-gray-100 text-slate-300',
+              ? 'bg-white/10 text-white shadow-sm hover:bg-red-600 active:bg-red-700'
+              : 'cursor-not-allowed bg-white/5 text-white/20',
           ].join(' ')}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -63,8 +63,8 @@ export function SectionHeader({
           className={[
             'flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300 active:scale-95 sm:h-10 sm:w-10',
             canNext
-              ? 'bg-gray-100 text-slate-700 shadow-sm hover:bg-gray-200 hover:shadow-md active:bg-gray-300'
-              : 'cursor-not-allowed bg-gray-100 text-slate-300',
+              ? 'bg-white/10 text-white shadow-sm hover:bg-red-600 active:bg-red-700'
+              : 'cursor-not-allowed bg-white/5 text-white/20',
           ].join(' ')}
         >
           <ChevronRight className="h-4 w-4" aria-hidden />

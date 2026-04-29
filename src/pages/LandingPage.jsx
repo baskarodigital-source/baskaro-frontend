@@ -689,7 +689,7 @@ function BrandedPhonesSection() {
   }
 
   return (
-    <section className="w-full py-6 bg-[#feeceb] border-y border-red-100">
+    <section className="w-full py-6 bg-black border-y border-white/10">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -856,15 +856,15 @@ function CarouselSection({ title, viewAllText, products }) {
   }
 
   return (
-    <section className="w-full py-6 bg-[#feeceb] border-y border-red-100">
+    <section className="w-full py-6 bg-black border-y border-white/10">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-4 flex items-end justify-between gap-4">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">
+          <h2 className="text-2xl font-black text-white tracking-tight sm:text-3xl">
             {title} <span className="text-red-600">.</span>
           </h2>
           <a
             href="#"
-            className="inline-flex items-center gap-2 rounded-full bg-blue-900 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/25"
+            className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/25"
           >
             {viewAllText}
             <ChevronRight size={14} strokeWidth={3} />
@@ -876,7 +876,7 @@ function CarouselSection({ title, viewAllText, products }) {
             type="button"
             onClick={() => scrollCarousel(-1)}
             aria-label="Scroll products left"
-            className="absolute -left-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-xl transition-all hover:scale-110 hover:border-blue-900 hover:bg-blue-900 hover:text-white sm:flex"
+            className="absolute -left-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-xl transition-all hover:scale-110 hover:border-red-600 hover:bg-red-600 sm:flex"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
           </button>
@@ -884,7 +884,7 @@ function CarouselSection({ title, viewAllText, products }) {
             type="button"
             onClick={() => scrollCarousel(1)}
             aria-label="Scroll products right"
-            className="absolute -right-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-xl transition-all hover:scale-110 hover:border-blue-900 hover:bg-blue-900 hover:text-white sm:flex"
+            className="absolute -right-5 top-1/2 z-20 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-xl transition-all hover:scale-110 hover:border-red-600 hover:bg-red-600 sm:flex"
           >
             <ChevronRight className="h-6 w-6" aria-hidden />
           </button>
@@ -1620,15 +1620,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <FlashDealsSection />
-
-      {/* Top Selling Brands Section */}
-      <section className="w-full pt-6 pb-2 bg-gradient-to-b from-white to-slate-50/50 border-b border-slate-100">
-        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-          <TopSellingBrands brands={topSellingBrands} />
-        </div>
-      </section>
-
       {/* Services Section */}
       <section className="w-full pt-2 pb-4 bg-white overflow-hidden relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-50 via-white to-white opacity-60 pointer-events-none" />
@@ -1675,6 +1666,15 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Top Selling Brands Section */}
+      <section className="w-full pt-6 pb-2 bg-gradient-to-b from-white to-slate-50/50 border-b border-slate-100">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
+          <TopSellingBrands title="Shop Phone by Brand" brands={topSellingBrands} />
+        </div>
+      </section>
+
+      <FlashDealsSection title="Brand New Phones" />
 
       {/* Sell Your Old Device Now */}
       <section id="sell-your-device" className="w-full scroll-mt-20 pt-6 pb-8 bg-white border-y border-slate-100 relative overflow-hidden">
@@ -1765,10 +1765,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Best selling phones */}
-      <BestSellingSection
-        title="Best Selling Phones"
-        products={PRE_OWNED_DEVICES_CAROUSEL.map((p) => ({ ...p, name: p.title }))}
+      {/* Buy Pre-Owned Devices */}
+      <CarouselSection
+        title="Buy Pre-Owned Devices"
+        viewAllText="View All"
+        products={PRE_OWNED_DEVICES_CAROUSEL}
       />
 
       {/* Banners 1 */}
@@ -1777,20 +1778,13 @@ export default function LandingPage() {
       {/* Popular categories */}
       <CategoryGridSection />
 
-      {/* Newly launched and trending */}
-      <BrandedPhonesSection />
-
-      {/* Banners 2 */}
-      <PromoBannersSection />
-
-      {/* Buy Pre-Owned Devices */}
-      <CarouselSection
-        title="Buy Pre-Owned Devices"
-        viewAllText="View All"
-        products={PRE_OWNED_DEVICES_CAROUSEL}
+      {/* Best selling phones */}
+      <BestSellingSection
+        title="Trending Electronics"
+        products={PRE_OWNED_DEVICES_CAROUSEL.map((p) => ({ ...p, name: p.title }))}
       />
 
-      {/* Banners 3 */}
+      {/* Banners 2 */}
       <PromoBannersSection />
 
       {/* Right-side "More" drawer */}

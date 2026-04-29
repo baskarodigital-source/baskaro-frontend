@@ -68,14 +68,14 @@ function mapApiDeal(d) {
   }
 }
 
-export function FlashDealsSection() {
+export function FlashDealsSection({ title: propTitle }) {
   const navigate = useNavigate()
   const scrollRef = useRef(null)
   const [activeTab, setActiveTab] = useState(0)
   const [deals, setDeals] = useState(FLASH_DEALS_FALLBACK)
   const [loading, setLoading] = useState(true)
   const [usedFallback, setUsedFallback] = useState(true)
-  const [title, setTitle] = useState('Hurry Up! Get Up to 40% Off')
+  const [title, setTitle] = useState(propTitle || 'Brand New Phones')
 
   useEffect(() => {
     let cancelled = false
@@ -83,7 +83,7 @@ export function FlashDealsSection() {
     getFlashDealSection()
       .then((section) => {
         if (cancelled) return
-        if (section?.title) setTitle(String(section.title))
+        if (section?.title && !propTitle) setTitle(String(section.title))
       })
       .catch(() => { })
     getFlashDeals()
@@ -160,14 +160,14 @@ export function FlashDealsSection() {
       </div>
 
       <div className="flex flex-1 flex-col items-center text-center px-1 pb-2">
-        <h3 className="mb-1 line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-[#1e1b4b] transition-colors group-hover:text-blue-600">
+        <h3 className="mb-1 line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-slate-900 transition-colors group-hover:text-red-600">
           {deal.name}
         </h3>
 
         <div className="mt-auto">
           <p className="text-[11px] font-medium text-slate-400 mb-0.5">*best price starts from</p>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-xl font-bold text-[#0070c1] tracking-tight">{deal.price}</span>
+            <span className="text-xl font-bold text-red-600 tracking-tight">{deal.price}</span>
             <span className="text-sm font-medium text-slate-400 line-through">
               {deal.originalPrice}
             </span>
@@ -177,7 +177,7 @@ export function FlashDealsSection() {
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-[#1e1b4b] bg-white py-2 text-[12px] font-bold text-[#1e1b4b] transition-all duration-300 hover:bg-[#1e1b4b] hover:text-white"
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-red-600 bg-red-600 py-2 text-[12px] font-bold text-white transition-all duration-300 hover:bg-red-700 hover:border-red-700"
         >
           <Plus className="h-4 w-4" />
           add to cart
@@ -187,11 +187,11 @@ export function FlashDealsSection() {
   )
 
   return (
-    <section className="relative w-full overflow-hidden bg-[#feeceb] pt-6 pb-2">
+    <section className="relative w-full overflow-hidden bg-black pt-10 pb-6">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-[#111827] sm:text-3xl">
+            <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
               {title}
             </h2>
             <div className="mt-1 h-[3px] w-[50px] bg-red-600" />
@@ -201,7 +201,7 @@ export function FlashDealsSection() {
              <button
               type="button"
               onClick={() => scroll('left')}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-red-600 hover:text-red-600 active:scale-90"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-red-600 hover:border-red-600 active:scale-90"
               aria-label="Scroll left"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -209,7 +209,7 @@ export function FlashDealsSection() {
             <button
               type="button"
               onClick={() => scroll('right')}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-all hover:border-red-600 hover:text-red-600 active:scale-90"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-red-600 hover:border-red-600 active:scale-90"
               aria-label="Scroll right"
             >
               <ChevronRight className="h-5 w-5" />
@@ -239,7 +239,7 @@ export function FlashDealsSection() {
             >
               {deals.map((deal) => {
                 const wrapClass =
-                  'group relative flex w-[220px] shrink-0 flex-col rounded-[2rem] bg-white p-3.5 shadow-sm transition-all duration-500 hover:shadow-xl sm:w-[240px] md:w-[260px]'
+                  'group relative flex w-[220px] shrink-0 flex-col rounded-[2rem] bg-white p-3.5 shadow-sm transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/20 sm:w-[240px] md:w-[260px]'
                 const clickable = Boolean(deal.linkUrl)
                 return (
                   <div
