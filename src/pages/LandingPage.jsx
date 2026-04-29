@@ -689,7 +689,7 @@ function BrandedPhonesSection() {
   }
 
   return (
-    <section className="w-full py-6 bg-black border-y border-white/10">
+    <section className="w-full py-6 bg-gradient-to-b from-red-950 via-zinc-950 to-black border-y border-red-900/20">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -856,7 +856,7 @@ function CarouselSection({ title, viewAllText, products }) {
   }
 
   return (
-    <section className="w-full py-6 bg-black border-y border-white/10">
+    <section className="w-full py-6 bg-gradient-to-b from-red-950 via-zinc-950 to-black border-y border-red-900/20">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-4 flex items-end justify-between gap-4">
           <h2 className="text-2xl font-black text-white tracking-tight sm:text-3xl">
@@ -1536,7 +1536,11 @@ export default function LandingPage() {
   }, [navDropdownOpen])
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-red-100 selection:text-red-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white font-sans selection:bg-red-100 selection:text-red-900 relative overflow-hidden">
+      {/* Decorative Background Accents */}
+      <div className="absolute top-0 right-0 -z-10 w-[800px] h-[800px] bg-red-50/50 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[20%] -left-20 -z-10 w-[600px] h-[600px] bg-blue-50/30 blur-[100px] rounded-full pointer-events-none" />
+
       {/* Hero Section */}
       <section className="w-full py-0">
         <div className="w-full">
@@ -1557,11 +1561,11 @@ export default function LandingPage() {
                 {heroSlides.map((slide, index) => (
                   <div
                     key={slide.id || index}
-                    className="relative box-border shrink-0 h-[250px] bg-red-600 overflow-hidden"
+                    className="relative box-border shrink-0 h-[320px] sm:h-[420px] md:h-[500px] lg:h-[550px] bg-red-600 overflow-hidden"
                     style={{ width: `${100 / heroSlideCount}%` }}
                   >
                     <img
-                      src={resolveHeroImageUrl(slide.bgImg || slide.img) || 'https://placehold.co/1200x250/e11d48/ffffff?text=Baskaro+Banner'}
+                      src={resolveHeroImageUrl(slide.bgImg || slide.img) || 'https://placehold.co/1200x550/e11d48/ffffff?text=Baskaro+Banner'}
                       alt="Hero banner"
                       className="h-full w-full object-cover"
                     />

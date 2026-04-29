@@ -159,8 +159,8 @@ export function CategoryRibbon({ variant = 'bar' }) {
 
   const outer =
     variant === 'embedded'
-      ? 'relative w-full rounded-2xl border border-slate-800 bg-black py-3 shadow-lg sm:py-4'
-      : 'relative w-full border-b border-slate-800 bg-black py-2.5 sm:py-3.5'
+      ? 'relative w-full rounded-2xl border border-red-900/30 bg-gradient-to-r from-black via-red-950 to-black py-3 shadow-lg sm:py-4'
+      : 'relative w-full border-b border-red-900/30 bg-gradient-to-r from-black via-red-950 to-black py-2.5 sm:py-3.5'
 
   return (
     <section className={outer} aria-label="Shop by category">

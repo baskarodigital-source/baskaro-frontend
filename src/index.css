@@ -246,3 +246,19 @@ div.border-2.border-dashed.border-slate-200.rounded-3xl.bg-white.group.cursor-po
 .animate-text-shimmer {
   animation: text-shimmer 4s linear infinite;
 }
+
+@keyframes float-glow {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(150px, -150px) scale(1.3);
+  }
+  66% {
+    transform: translate(-100px, 100px) scale(0.8);
+  }
+}
+
+.animate-float-glow {
+  animation: float-glow 5s ease-in-out infinite;
+}

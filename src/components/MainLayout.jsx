@@ -50,106 +50,147 @@ export function MainLayout({ children }) {
       <CategoryRibbon variant="bar" />
       {children}
       <WhatsAppWidget />
-      <footer className="border-t border-red-900/50 bg-gradient-to-b from-red-950 via-zinc-950 to-black text-red-100">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-          <div className="grid gap-8 grid-cols-2 md:grid-cols-5">
-            <div>
-              <img
-                src="/logo.png"
-                alt="BAS karo"
-                className="ml-2 h-10 w-auto max-w-[180px] object-contain object-left drop-shadow-sm"
-              />
-              <p className="mt-2 text-sm font-semibold text-red-200/90">
-                Buy and sell pre-owned mobiles with confidence.
+      <footer className="relative border-t border-red-500/40 bg-[#010101] text-white pt-24 pb-12 overflow-hidden">
+        {/* Advanced Animated Mesh Gradient Layers */}
+        <div className="absolute -bottom-48 -right-48 w-[800px] h-[800px] pointer-events-none">
+          <div 
+            className="w-full h-full bg-red-600/25 blur-[160px] rounded-full animate-float-glow" 
+            style={{ willChange: 'transform' }}
+          />
+        </div>
+        <div className="absolute -top-48 -left-48 w-[600px] h-[600px] pointer-events-none">
+          <div 
+            className="w-full h-full bg-red-500/20 blur-[140px] rounded-full animate-float-glow [animation-delay:-2s]" 
+            style={{ willChange: 'transform' }}
+          />
+        </div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] pointer-events-none">
+          <div 
+            className="w-full h-full bg-red-600/15 blur-[120px] rounded-full animate-float-glow [animation-delay:-4s]" 
+            style={{ willChange: 'transform' }}
+          />
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-red-900/30 to-transparent pointer-events-none" />
+
+        {/* Futuristic Glowing Top Edge (Enhanced) */}
+        <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-y-16 lg:grid-cols-12 lg:gap-x-12">
+            {/* Brand & Newsletter Section */}
+            <div className="lg:col-span-5">
+              <Link to="/" className="inline-block transition-transform hover:scale-105">
+                <img src="/logo.png" alt="BAS karo" className="h-12 w-auto brightness-110" />
+              </Link>
+              <p className="mt-6 max-w-sm text-base font-medium text-zinc-400/90 leading-relaxed">
+                India's most trusted platform to buy and sell pre-owned devices. <span className="text-zinc-100">Fast, secure, and transparent.</span>
               </p>
-              <div className="mt-6">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400">Follow us on</h3>
-                <div className="mt-3 flex gap-4">
-                  <a href="#" className="text-red-200/60 hover:text-white transition-colors">
-                    <FacebookIcon size={20} />
+              
+              <div className="mt-10">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] bg-gradient-to-r from-red-500 to-rose-400 bg-clip-text text-transparent">Stay Updated</h3>
+                <p className="mt-2 text-sm text-zinc-500">Subscribe to get the best deals on pre-owned flagships.</p>
+                <form className="mt-4 flex max-w-md gap-x-2" onSubmit={(e) => e.preventDefault()}>
+                  <input
+                    type="email"
+                    required
+                    className="min-w-0 flex-auto rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm ring-1 ring-inset ring-white/10 transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none"
+                    placeholder="Enter your email"
+                  />
+                  <button
+                    type="submit"
+                    className="flex-none rounded-full bg-gradient-to-r from-red-600 to-rose-500 px-6 py-2.5 text-sm font-black text-white shadow-lg shadow-red-600/20 hover:from-red-500 hover:to-rose-400 transition-all active:scale-95"
+                  >
+                    Join
+                  </button>
+                </form>
+              </div>
+
+              <div className="mt-10 flex gap-5">
+                {[
+                  { icon: FacebookIcon, href: '#', label: 'Facebook' },
+                  { icon: TwitterIcon, href: '#', label: 'Twitter' },
+                  { icon: InstagramIcon, href: '#', label: 'Instagram' },
+                  { icon: LinkedinIcon, href: '#', label: 'LinkedIn' }
+                ].map((social) => (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    className="group flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all hover:border-red-500 hover:bg-red-500/10 hover:text-red-500"
+                    aria-label={social.label}
+                  >
+                    <social.icon size={18} className="transition-transform group-hover:scale-110" />
                   </a>
-                  <a href="#" className="text-red-200/60 hover:text-white transition-colors">
-                    <TwitterIcon size={20} />
-                  </a>
-                  <a href="#" className="text-red-200/60 hover:text-white transition-colors">
-                    <InstagramIcon size={20} />
-                  </a>
-                  <a href="#" className="text-red-200/60 hover:text-white transition-colors">
-                    <LinkedinIcon size={20} />
-                  </a>
-                </div>
+                ))}
               </div>
             </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-white">Services</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
-                <a className="block transition-colors hover:text-white" href="/sell-phone">
-                  Sell Phone
-                </a>
-                <a className="block transition-colors hover:text-white" href="/find-new-phone">
-                  Find New Phone
-                </a>
-                <a className="block transition-colors hover:text-white" href="/buy-accessories">
-                  Buy Accessories
-                </a>
-                <a className="block transition-colors hover:text-white" href="/repair-phone">
-                  Repair Phone
-                </a>
-                <a className="block transition-colors hover:text-white" href="/nearby-stores">
-                  Nearby Stores
-                </a>
+            {/* Links Grid */}
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-7">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">Services</h3>
+                <ul className="mt-6 space-y-4">
+                  {[
+                    { label: 'Sell Phone', href: '/sell-phone' },
+                    { label: 'Find New Phone', href: '/find-new-phone' },
+                    { label: 'Buy Accessories', href: '/buy-accessories' },
+                    { label: 'Repair Phone', href: '/repair-phone' },
+                    { label: 'Nearby Stores', href: '/nearby-stores' }
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <a href={link.href} className="text-sm font-bold text-zinc-400 transition-colors hover:text-red-500">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-white">Company</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
-                <a className="block transition-colors hover:text-white" href="#">
-                  About Us
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Careers
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Privacy Policy
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Terms of Use
-                </a>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">Company</h3>
+                <ul className="mt-6 space-y-4">
+                  {['About Us', 'Careers', 'Privacy Policy', 'Terms of Use', 'Warranty'].map((label) => (
+                    <li key={label}>
+                      <a href="#" className="text-sm font-bold text-zinc-400 transition-colors hover:text-red-500">
+                        {label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-white">Help & Support</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
-                <a className="block transition-colors hover:text-white" href="#">
-                  FAQ
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Contact Us
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Warranty
-                </a>
-                <a className="block transition-colors hover:text-white" href="#">
-                  Refund Policy
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-extrabold text-white">Portal</h3>
-              <div className="mt-3 space-y-2 text-sm font-semibold text-red-200/95">
-                <Link className="block transition-colors hover:text-white" to="/login" state={{ redirectTo: '/admin' }}>
-                  Admin Login
-                </Link>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-white">Support</h3>
+                <ul className="mt-6 space-y-4">
+                  {['FAQ', 'Contact Us', 'Refund Policy', 'Shipping', 'Sitemap'].map((label) => (
+                    <li key={label}>
+                      <a href="#" className="text-sm font-bold text-zinc-400 transition-colors hover:text-red-500">
+                        {label}
+                      </a>
+                    </li>
+                  ))}
+                  <li className="pt-4">
+                    <Link 
+                      to="/login" 
+                      state={{ redirectTo: '/admin' }}
+                      className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-xs font-black text-red-500 ring-1 ring-red-500/20 hover:bg-red-500/10 transition-all"
+                    >
+                      Admin Portal
+                    </Link>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
 
-          <div className="mt-10 border-t border-red-900/30 pt-6 text-center text-xs font-semibold text-red-300/80 sm:text-left">
-            Copyright &copy; {new Date().getFullYear()} BAS karo. All rights reserved.
+          <div className="mt-20 border-t border-white/5 pt-8 flex flex-col items-center justify-between gap-6 sm:flex-row">
+            <p className="text-xs font-bold text-zinc-500">
+              &copy; {new Date().getFullYear()} BAS karo. All rights reserved. Made in India with ❤️
+            </p>
+            <div className="flex gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">
+              <a href="#" className="hover:text-red-500 transition-colors">Privacy</a>
+              <a href="#" className="hover:text-red-500 transition-colors">Terms</a>
+              <a href="#" className="hover:text-red-500 transition-colors">Cookies</a>
+            </div>
           </div>
         </div>
       </footer>

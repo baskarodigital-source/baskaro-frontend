@@ -72,7 +72,7 @@ export function BestSellingSection({
   }
 
   return (
-    <section className={['relative w-full overflow-hidden bg-black pt-10 pb-6', className].join(' ')}>
+    <section className={['relative w-full overflow-hidden bg-gradient-to-b from-red-950 via-zinc-950 to-black pt-10 pb-6', className].join(' ')}>
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-8 relative z-10">
           <SectionHeader

@@ -187,7 +187,7 @@ export function FlashDealsSection({ title: propTitle }) {
   )
 
   return (
-    <section className="relative w-full overflow-hidden bg-black pt-10 pb-6">
+    <section className="relative w-full overflow-hidden bg-gradient-to-b from-red-950 via-zinc-950 to-black pt-10 pb-6">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div>
