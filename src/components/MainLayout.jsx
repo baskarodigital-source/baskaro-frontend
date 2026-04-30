@@ -80,7 +80,7 @@ export function MainLayout({ children }) {
             {/* Brand & Newsletter Section */}
             <div className="lg:col-span-5">
               <Link to="/" className="inline-block transition-transform hover:scale-105">
-                <img src="/logo.png" alt="BAS karo" className="h-12 w-auto brightness-110" />
+                <img src="/logo.png" alt="BAS karo" className="h-12 w-auto brightness-0 invert" />
               </Link>
               <p className="mt-6 max-w-sm text-base font-medium text-zinc-400/90 leading-relaxed">
                 India's most trusted platform to buy and sell pre-owned devices. <span className="text-zinc-100">Fast, secure, and transparent.</span>
