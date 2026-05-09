@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Heart, Star } from 'lucide-react'
 import { gPhoto } from '../constants/googleImages'
 import { useWishlist } from '../context/WishlistContext'
@@ -184,6 +184,7 @@ function CheckboxRow({ label, checked, onChange }) {
 
 export default function BuyPreOwnedExplorePage() {
   const { kind, slug } = useParams()
+  const navigate = useNavigate()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const [introExpanded, setIntroExpanded] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
@@ -408,19 +409,25 @@ export default function BuyPreOwnedExplorePage() {
             return (
               <article
                 key={p.id}
+                onClick={() =>
+                  navigate(
+                    `/buy-pre-owned/product/${kind}/${slug}/${p.id}?name=${encodeURIComponent(p.name)}&img=${encodeURIComponent(p.img)}&rating=${encodeURIComponent(String(p.rating))}&price=${encodeURIComponent(String(p.price))}&mrp=${encodeURIComponent(String(p.mrp))}`,
+                  )
+                }
                 className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:gap-6 sm:p-5"
               >
                 <div className="relative mx-auto w-full max-w-[200px] shrink-0 sm:mx-0 sm:w-48">
                   <button
                     type="button"
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation()
                       toggleWishlist({
                         id: wishlistId,
                         name: p.name,
                         price: String(p.price),
                         img: p.img,
                       })
-                    }
+                    }}
                     className={`absolute right-2 top-2 z-10 rounded-full p-2 shadow-md ring-1 transition ${
                       wishlisted ? 'bg-red-50 text-red-600 ring-red-200' : 'bg-white/95 text-slate-500 ring-slate-200 hover:text-red-600'
                     }`}

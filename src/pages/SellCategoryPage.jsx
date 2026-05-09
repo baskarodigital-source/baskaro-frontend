@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ServicePageLayout } from '../components/ServicePageLayout'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
 import {
@@ -13,6 +13,7 @@ import {
 
 export default function SellCategoryPage() {
   const { category } = useParams()
+  const navigate = useNavigate()
   const config = getSellCategoryConfig(category)
   const { brands: apiBrands, loading: brandsLoading } = useCatalogBrands()
 
@@ -27,6 +28,15 @@ export default function SellCategoryPage() {
 
   if (!config) {
     return <Navigate to="/sell/phone" replace />
+  }
+
+  const onSellNow = (product) => {
+    const itemLabel = product?.name ?? 'Selected device'
+    const img = product?.img ?? ''
+    const price = product?.price ?? ''
+    navigate(
+      `/sell/sub?item=${encodeURIComponent(itemLabel)}&cat=${encodeURIComponent(category)}&price=${encodeURIComponent(price)}&img=${encodeURIComponent(img)}`,
+    )
   }
 
   return (
@@ -50,6 +60,8 @@ export default function SellCategoryPage() {
       stories={STORIES_DEFAULT}
       faqs={FAQS_DEFAULT}
       downloadBannerSubtitle="Baskaro | Sell smarter"
+      productButtonLabel="Sell Now"
+      onProductClick={onSellNow}
       heroImageUrl={config.heroImageUrl}
       heroImageAlt={config.heroImageAlt ?? config.title}
     />

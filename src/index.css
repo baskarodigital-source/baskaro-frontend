@@ -262,3 +262,37 @@ div.border-2.border-dashed.border-slate-200.rounded-3xl.bg-white.group.cursor-po
 .animate-float-glow {
   animation: float-glow 5s ease-in-out infinite;
 }
+
+/* You May Also Like — restrained type (Outfit can look heavy at semibold+) */
+.ymal-section h2.ymal-heading {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: rgb(30 41 59);
+}
+
+@media (min-width: 640px) {
+  .ymal-section h2.ymal-heading {
+    font-size: 1.0625rem;
+  }
+}
+
+.ymal-card .ymal-title {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgb(30 41 59);
+}
+
+.ymal-card .ymal-price {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: rgb(15 23 42);
+}
+
+.ymal-card .ymal-pct {
+  font-size: 0.75rem;
+  font-weight: 500;
+}

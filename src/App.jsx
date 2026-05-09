@@ -11,6 +11,11 @@ import UserDashboard from './pages/UserDashboard'
 import SellPhonePage from './pages/SellPhonePage'
 import SellCategoryPage from './pages/SellCategoryPage'
 import SellSubPage from './pages/SellSubPage'
+import SellDeviceCheckPage from './pages/SellDeviceCheckPage'
+import SellDefectsPage from './pages/SellDefectsPage'
+import SellFunctionalProblemsPage from './pages/SellFunctionalProblemsPage'
+import SellAccessoriesPage from './pages/SellAccessoriesPage'
+import SellModelDetailPage from './pages/SellModelDetailPage'
 import AdminDashboard from './pages/AdminDashboard'
 import BuyAccessoriesPage from './pages/BuyAccessoriesPage'
 import RepairPhonePage from './pages/RepairPhonePage'
@@ -19,6 +24,7 @@ import FindNewGadgetsPage from './pages/FindNewGadgetsPage'
 import FindNewGadgetsSectionPage from './pages/FindNewGadgetsSectionPage'
 import BuyPreOwnedPage from './pages/BuyPreOwnedPage'
 import BuyPreOwnedExplorePage from './pages/BuyPreOwnedExplorePage'
+import BuyPreOwnedProductPage from './pages/BuyPreOwnedProductPage'
 import NearbyStoresPage from './pages/NearbyStoresPage'
 import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
@@ -68,10 +74,16 @@ export default function App() {
                     <Route path="/dashboard" element={<UserDashboard />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/sell/sub" element={<SellSubPage />} />
+                    <Route path="/sell/device-check" element={<SellDeviceCheckPage />} />
+                    <Route path="/sell/defects" element={<SellDefectsPage />} />
+                    <Route path="/sell/functional-problems" element={<SellFunctionalProblemsPage />} />
+                    <Route path="/sell/accessories" element={<SellAccessoriesPage />} />
+                    <Route path="/sell/model-detail" element={<SellModelDetailPage />} />
                     <Route path="/sell/:category" element={<SellCategoryPage />} />
                     <Route path="/sell-phone" element={<SellPhonePage />} />
                     <Route path="/buy-accessories" element={<BuyAccessoriesPage />} />
                     <Route path="/buy-pre-owned/:kind/:slug" element={<BuyPreOwnedExplorePage />} />
+                    <Route path="/buy-pre-owned/product/:kind/:slug/:productId" element={<BuyPreOwnedProductPage />} />
                     <Route path="/buy-pre-owned" element={<BuyPreOwnedPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/repair-phone" element={<RepairPhonePage />} />

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, Smartphone, Bike, Banknote } from 'lucide-react'
 import { SellSubShowcaseCarousels } from '../components/SellSubShowcaseCarousels.jsx'
 
@@ -373,9 +373,13 @@ function modelsForSeries(brand, series, cat) {
 }
 
 export default function SellSubPage() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const item = searchParams.get('item')?.trim() || ''
   const cat = searchParams.get('cat')?.trim() || 'phone'
+  const selectedPrice = searchParams.get('price')?.trim() || ''
+  const selectedImg = searchParams.get('img')?.trim() || ''
+  const exactProductMode = Boolean(selectedPrice || selectedImg)
 
   const [seriesQuery, setSeriesQuery] = useState('')
   const [modelQuery, setModelQuery] = useState('')
@@ -468,68 +472,108 @@ export default function SellSubPage() {
           </div>
         </div>
 
-        <section className="mt-10">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-extrabold text-slate-900 sm:text-xl">Select Series</h2>
-            <input
-              type="search"
-              value={seriesQuery}
-              onChange={(e) => setSeriesQuery(e.target.value)}
-              placeholder="Filter series..."
-              className="h-10 max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {filteredSeries.map((s) => {
-              const active = s === selectedSeries
-              return (
+        {exactProductMode && (
+          <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[220px_1fr] md:items-center">
+              <div className="mx-auto flex h-[230px] w-[180px] items-center justify-center rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+                <img
+                  src={selectedImg || PHONE_IMGS[0]}
+                  alt={item}
+                  className="max-h-full max-w-full object-contain"
+                  loading="lazy"
+                />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">{item}</h2>
+                <p className="mt-4 text-lg font-semibold text-slate-700">Get Upto</p>
+                <p className="mt-1 text-4xl font-extrabold text-rose-500 sm:text-5xl">₹{selectedPrice || '24,120'}</p>
                 <button
-                  key={s}
                   type="button"
-                  onClick={() => setSelectedSeries(s)}
-                  className={[
-                    'rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition sm:text-sm',
-                    active
-                      ? 'border-red-600 bg-red-50 text-red-800 shadow-sm ring-2 ring-red-200'
-                      : 'border-slate-200 bg-slate-100 text-slate-800 hover:border-red-200 hover:bg-red-50/50',
-                  ].join(' ')}
+                  onClick={() =>
+                    navigate(
+                      `/sell/device-check?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}&price=${encodeURIComponent(selectedPrice || '24,120')}&img=${encodeURIComponent(selectedImg || '')}`,
+                    )
+                  }
+                  className="mt-5 inline-flex items-center justify-center rounded-xl bg-teal-400 px-6 py-3 text-base font-bold text-white shadow-sm transition hover:bg-teal-500"
                 >
-                  {s}
+                  Get Exact Value <span className="ml-2">→</span>
                 </button>
-              )
-            })}
-          </div>
-        </section>
-
-        <section className="mt-12">
-          <h2 className="mb-4 text-lg font-extrabold text-slate-900 sm:text-xl">Select Model</h2>
-          {!selectedSeries ? (
-            <p className="text-sm text-slate-500">Choose a series above to see models.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-6 lg:gap-3">
-              {filteredModels.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  title={`Sell Old ${m.name}`}
-                  className="flex h-[156px] w-full flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white p-2 text-center shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition hover:border-red-300 hover:shadow-[0_4px_12px_rgba(185,28,28,0.12)] sm:h-[168px] sm:p-2.5 md:h-[174px]"
-                >
-                  <div className="flex h-[88px] shrink-0 items-center justify-center sm:h-[94px] md:h-[96px]">
-                    <img
-                      src={m.img}
-                      alt=""
-                      className="max-h-full max-w-[88%] object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                  <p className="mt-auto flex min-h-[2.5rem] items-start justify-center px-0.5 pt-1 text-center text-[10px] font-semibold leading-tight text-slate-900 sm:min-h-[2.75rem] sm:text-[11px]">
-                    <span className="line-clamp-2">{m.name}</span>
-                  </p>
-                </button>
-              ))}
+              </div>
             </div>
-          )}
-        </section>
+          </section>
+        )}
+
+        {!exactProductMode && (
+          <>
+            <section className="mt-10">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-lg font-extrabold text-slate-900 sm:text-xl">Select Series</h2>
+                <input
+                  type="search"
+                  value={seriesQuery}
+                  onChange={(e) => setSeriesQuery(e.target.value)}
+                  placeholder="Filter series..."
+                  className="h-10 max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {filteredSeries.map((s) => {
+                  const active = s === selectedSeries
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSelectedSeries(s)}
+                      className={[
+                        'rounded-xl border px-3 py-2.5 text-center text-xs font-bold transition sm:text-sm',
+                        active
+                          ? 'border-red-600 bg-red-50 text-red-800 shadow-sm ring-2 ring-red-200'
+                          : 'border-slate-200 bg-slate-100 text-slate-800 hover:border-red-200 hover:bg-red-50/50',
+                      ].join(' ')}
+                    >
+                      {s}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            <section className="mt-12">
+              <h2 className="mb-4 text-lg font-extrabold text-slate-900 sm:text-xl">Select Model</h2>
+              {!selectedSeries ? (
+                <p className="text-sm text-slate-500">Choose a series above to see models.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 md:grid-cols-4 lg:grid-cols-6 lg:gap-3">
+                  {filteredModels.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      title={`Sell Old ${m.name}`}
+                      onClick={() =>
+                        navigate(
+                          `/sell/model-detail?item=${encodeURIComponent(m.name)}&cat=${encodeURIComponent(cat)}&img=${encodeURIComponent(m.img)}&sold=${encodeURIComponent('19450+')}&price=${encodeURIComponent('19450')}`,
+                        )
+                      }
+                      className="flex h-[156px] w-full flex-col overflow-hidden rounded-lg border border-slate-200/90 bg-white p-2 text-center shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition hover:border-red-300 hover:shadow-[0_4px_12px_rgba(185,28,28,0.12)] sm:h-[168px] sm:p-2.5 md:h-[174px]"
+                    >
+                      <div className="flex h-[88px] shrink-0 items-center justify-center sm:h-[94px] md:h-[96px]">
+                        <img
+                          src={m.img}
+                          alt=""
+                          className="max-h-full max-w-[88%] object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                      <p className="mt-auto flex min-h-[2.5rem] items-start justify-center px-0.5 pt-1 text-center text-[10px] font-semibold leading-tight text-slate-900 sm:min-h-[2.75rem] sm:text-[11px]">
+                        <span className="line-clamp-2">{m.name}</span>
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
 
         {cat === 'phone' && <SellSubShowcaseCarousels categorySlug={cat} />}
 

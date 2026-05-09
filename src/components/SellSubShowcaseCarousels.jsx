@@ -37,6 +37,10 @@ function sellSubPath(item, cat) {
   return `/sell/sub?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}`
 }
 
+function modelDetailPath(modelName, cat, img) {
+  return `/sell/model-detail?item=${encodeURIComponent(modelName)}&cat=${encodeURIComponent(cat)}&img=${encodeURIComponent(img)}&sold=${encodeURIComponent('19450+')}&price=${encodeURIComponent('19450')}`
+}
+
 function useCarouselScroll() {
   const scrollerRef = useRef(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -207,7 +211,7 @@ export function SellSubShowcaseCarousels({ categorySlug = 'phone' }) {
             {TOP_SELLING_MODELS.map((m) => (
               <Link
                 key={m.name}
-                to={sellSubPath(m.name, categorySlug)}
+                to={modelDetailPath(m.name, categorySlug, m.img)}
                 className="group flex min-w-[124px] max-w-[124px] shrink-0 flex-col items-center overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:border-red-200 hover:shadow-[0_4px_12px_rgba(185,28,28,0.1)] sm:min-w-[132px] sm:max-w-[132px]"
               >
                 <div className="flex h-[108px] w-full items-center justify-center bg-slate-50/80 px-2 pt-3">
