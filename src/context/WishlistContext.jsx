@@ -14,19 +14,44 @@ export function WishlistProvider({ children }) {
   }, [wishlist])
 
   const addToWishlist = (product) => {
-    if (!product?.id) return
+    if (product?.id == null || product.id === '') return
+    const normalized = {
+      ...product,
+      id: String(product.id),
+      name: product.name ?? product.title ?? 'Product',
+      img: product.img ?? product.image ?? '',
+      price: product.price != null ? String(product.price) : '',
+    }
     setWishlist((prev) => {
-      const exists = prev.some((item) => item.id === product.id)
+      const exists = prev.some((item) => String(item.id) === normalized.id)
       if (exists) return prev
-      return [...prev, product]
+      return [...prev, normalized]
     })
   }
 
   const removeFromWishlist = (productId) => {
-    setWishlist((prev) => prev.filter((item) => item.id !== productId))
+    const key = String(productId)
+    setWishlist((prev) => prev.filter((item) => String(item.id) !== key))
   }
 
-  const isWishlisted = (productId) => wishlist.some((item) => item.id === productId)
+  const isWishlisted = (productId) =>
+    wishlist.some((item) => String(item.id) === String(productId))
+
+  const toggleWishlist = (product) => {
+    if (product?.id == null || product.id === '') return
+    const normalized = {
+      ...product,
+      id: String(product.id),
+      name: product.name ?? product.title ?? 'Product',
+      img: product.img ?? product.image ?? '',
+      price: product.price != null ? String(product.price) : '',
+    }
+    setWishlist((prev) => {
+      const exists = prev.some((item) => String(item.id) === normalized.id)
+      if (exists) return prev.filter((item) => String(item.id) !== normalized.id)
+      return [...prev, normalized]
+    })
+  }
 
   const clearWishlist = () => setWishlist([])
 
@@ -37,6 +62,7 @@ export function WishlistProvider({ children }) {
       addToWishlist,
       removeFromWishlist,
       isWishlisted,
+      toggleWishlist,
       clearWishlist,
     }),
     [wishlist],

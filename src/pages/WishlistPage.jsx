@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 
+function isCatalogProductId(id) {
+  return /^[a-f0-9]{24}$/i.test(String(id ?? ''))
+}
+
 export default function WishlistPage() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
@@ -10,17 +14,17 @@ export default function WishlistPage() {
 
   if (wishlistCount === 0) {
     return (
-      <section className="mx-auto flex min-h-[70vh] w-full max-w-5xl flex-col items-center justify-center px-4 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-500">
-          <Heart className="h-10 w-10" />
+      <section className="flex min-h-[min(85vh,52rem)] w-full flex-col items-center justify-center bg-white px-4 py-16 text-center">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-rose-50 text-red-600 shadow-inner ring-1 ring-rose-100">
+          <Heart className="h-11 w-11 fill-red-600" strokeWidth={1.5} />
         </div>
-        <h1 className="mt-6 text-3xl font-black tracking-tight text-slate-900">Your wishlist is empty</h1>
-        <p className="mt-2 max-w-md text-sm font-medium text-slate-500">
+        <h1 className="mt-8 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Your wishlist is empty</h1>
+        <p className="mt-3 max-w-md text-sm font-medium leading-relaxed text-slate-500 sm:text-base">
           Save your favorite products and review them any time before checkout.
         </p>
         <Link
           to="/"
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-red-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-700"
+          className="mt-10 inline-flex items-center justify-center rounded-xl bg-red-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-red-600/30 transition hover:bg-red-700"
         >
           Start exploring
         </Link>
@@ -71,7 +75,7 @@ export default function WishlistPage() {
               <h2 className="mt-4 line-clamp-2 min-h-[2.75rem] text-sm font-bold text-slate-900">
                 {item.name}
               </h2>
-              <p className="mt-2 text-lg font-black text-teal-600">Rs {item.price}</p>
+              <p className="mt-2 text-lg font-black text-red-600">₹{item.price}</p>
 
               <div className="mt-auto flex gap-2 pt-4">
                 <button
@@ -87,10 +91,14 @@ export default function WishlistPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate(`/product/${item.id}`)}
+                  onClick={() =>
+                    isCatalogProductId(item.id)
+                      ? navigate(`/product/${item.id}`)
+                      : navigate('/buy-pre-owned')
+                  }
                   className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                 >
-                  View
+                  {isCatalogProductId(item.id) ? 'View' : 'Browse'}
                 </button>
               </div>
             </article>

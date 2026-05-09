@@ -218,7 +218,7 @@ function OverviewTab({ user, setTab }) {
             <p className="text-xs font-semibold text-slate-500">Get an instant, AI-driven valuation for your old phone.</p>
           </button>
           
-          <button onClick={() => navigate('/marketplace')} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-slate-800 hover:shadow-lg hover:-translate-y-1 text-left">
+          <button onClick={() => navigate('/buy-pre-owned')} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-slate-800 hover:shadow-lg hover:-translate-y-1 text-left">
             <div className="absolute right-0 top-0 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <BadgeCheck size={100} className="translate-x-4 -translate-y-4" />
             </div>

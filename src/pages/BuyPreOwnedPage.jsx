@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { ServicePageLayout } from '../components/ServicePageLayout'
+import { BuyPreOwnedLead } from '../components/BuyPreOwnedLead'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
 import { gPhoto } from '../constants/googleImages'
 import { useCart } from '../context/CartContext'
@@ -67,32 +68,37 @@ export default function BuyPreOwnedPage() {
   }, [brandsLoading, apiBrands])
 
   return (
-    <ServicePageLayout
-      breadcrumb="Home / Buy Pre-Owned"
-      title="Buy Pre-Owned Devices"
-      heroPills={['Certified devices', 'Warranty included', 'Best value']}
-      searchLabel="Search pre-owned devices"
-      searchPlaceholder="e.g. iPhone 14, Samsung S23..."
-      searchButtonText="Search"
-      brands={brands}
-      brandsLoading={brandsLoading}
-      brandPickerSubtitle="Browse by brand"
-      howItWorksTitle="How buying pre-owned works"
-      howItWorks={HOW_IT_WORKS}
-      whyUs={WHY_US}
-      hotDealsTitle="Top pre-owned deals"
-      productsSection={{
-        title: 'Popular pre-owned devices',
-        priceLabel: 'From',
-        items: PRE_OWNED_PHONES,
-        viewAllHref: '#',
-      }}
-      stories={STORIES}
-      faqs={FAQS}
-      downloadBannerSubtitle="Buy pre-owned | Compare models | Add to cart"
-      productButtonLabel="Add to Cart"
-      onProductClick={(p) => addToCart(p)}
-    />
+    <>
+      <BuyPreOwnedLead />
+      <div id="buy-preowned-main" className="scroll-mt-28">
+        <ServicePageLayout
+          breadcrumb="Home / Buy Pre-Owned"
+          title="Buy Pre-Owned Devices"
+          heroPills={['Certified devices', 'Warranty included', 'Best value']}
+          searchLabel="Search pre-owned devices"
+          searchPlaceholder="e.g. iPhone 14, Samsung S23..."
+          searchButtonText="Search"
+          brands={brands}
+          brandsLoading={brandsLoading}
+          brandPickerSubtitle="Browse by brand"
+          howItWorksTitle="How buying pre-owned works"
+          howItWorks={HOW_IT_WORKS}
+          whyUs={WHY_US}
+          hotDealsTitle="Top pre-owned deals"
+          productsSection={{
+            title: 'Popular pre-owned devices',
+            priceLabel: 'From',
+            items: PRE_OWNED_PHONES,
+            viewAllHref: '#',
+          }}
+          stories={STORIES}
+          faqs={FAQS}
+          downloadBannerSubtitle="Buy pre-owned | Compare models | Add to cart"
+          productButtonLabel="Add to Cart"
+          onProductClick={(p) => addToCart(p)}
+        />
+      </div>
+    </>
   )
 }
 

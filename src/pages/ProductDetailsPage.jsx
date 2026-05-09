@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { useWishlist } from '../context/WishlistContext'
 import { getMobileModel, getOffers } from '../lib/api/baskaroApi.js'
 
 const CONDITION_GRADES = [
@@ -56,6 +57,7 @@ export default function ProductDetailsPage() {
    const [showAllSpecs, setShowAllSpecs] = useState(false)
    const [isAdding, setIsAdding] = useState(false)
    const { addToCart } = useCart()
+   const { isWishlisted, toggleWishlist } = useWishlist()
    const navigate = useNavigate()
 
    useEffect(() => {
@@ -119,7 +121,7 @@ export default function ProductDetailsPage() {
       return (
          <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 font-['Inter'] px-4">
             <p className="text-slate-800 font-bold text-center">{loadErr || 'Product not found'}</p>
-            <Link to="/marketplace" className="text-red-600 font-bold hover:underline">Back to marketplace</Link>
+            <Link to="/buy-pre-owned" className="text-red-600 font-bold hover:underline">Back to Buy Pre-Owned</Link>
          </div>
       )
    }
@@ -147,7 +149,7 @@ export default function ProductDetailsPage() {
             <nav className="mb-2 flex items-center gap-2 text-[12px] font-medium text-slate-500 overflow-x-auto whitespace-nowrap scrollbar-hide py-1">
                <Link to="/" className="hover:text-red-600">Home</Link>
                <ChevronRight size={14} className="shrink-0" />
-               <Link to="/marketplace" className="hover:text-red-600">Buy Pre-Owned Mobile Phone</Link>
+               <Link to="/buy-pre-owned" className="hover:text-red-600">Buy Pre-Owned Mobile Phone</Link>
                <ChevronRight size={14} className="shrink-0" />
                <Link to="#" className="hover:text-red-600">Buy Pre-Owned {product.brand}</Link>
                <ChevronRight size={14} className="shrink-0" />
@@ -192,8 +194,22 @@ export default function ProductDetailsPage() {
                         </div>
 
                         <div className="absolute top-4 right-4 z-10 flex flex-col gap-3">
-                           <button className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm hover:text-red-600 transition-colors border border-slate-100 active:scale-95">
-                              <Heart size={20} />
+                           <button
+                              type="button"
+                              onClick={() =>
+                                 toggleWishlist({
+                                    id,
+                                    name: product.title,
+                                    price: formatPrice(product.price),
+                                    img: product.images[0],
+                                 })
+                              }
+                              className={`flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm transition-colors active:scale-95 ${
+                                 isWishlisted(id) ? 'text-red-600' : 'text-slate-400 hover:text-red-600'
+                              }`}
+                              aria-label={isWishlisted(id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                           >
+                              <Heart size={20} className={isWishlisted(id) ? 'fill-red-600' : ''} />
                            </button>
                            <button className="h-9 w-9 rounded-full bg-white flex items-center justify-center text-slate-400 shadow-sm hover:text-blue-600 transition-colors border border-slate-100 active:scale-95">
                               <Share2 size={20} />

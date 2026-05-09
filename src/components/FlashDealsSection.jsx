@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlashDeals, getFlashDealSection } from '../lib/api/baskaroApi'
+import { useWishlist } from '../context/WishlistContext'
 
 const FLASH_DEALS_FALLBACK = [
   {
@@ -68,14 +69,84 @@ function mapApiDeal(d) {
   }
 }
 
-export function FlashDealsSection({ title: propTitle }) {
+function wishlistPriceFromDeal(deal) {
+  return String(deal.price || '')
+    .replace(/₹/g, '')
+    .replace(/\s/g, '')
+    .trim()
+}
+
+function FlashDealCardInner({ deal }) {
+  const { isWishlisted, toggleWishlist } = useWishlist()
+  const wishlisted = isWishlisted(deal.id)
+
+  return (
+    <>
+      <span className="absolute left-3 top-3 z-10 rounded-md bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
+        {deal.discount}
+      </span>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          toggleWishlist({
+            id: deal.id,
+            name: deal.name,
+            price: wishlistPriceFromDeal(deal),
+            img: deal.image,
+          })
+        }}
+        className={`absolute right-3 top-3 z-10 rounded-full p-1.5 shadow-sm transition ${
+          wishlisted ? 'bg-red-50 text-red-600' : 'bg-white text-slate-400 hover:text-red-500'
+        }`}
+        aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+      >
+        <Heart className={`h-4 w-4 ${wishlisted ? 'fill-red-600 text-red-600' : ''}`} />
+      </button>
+
+      <div className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-slate-50 p-2">
+        {deal.image ? (
+          <img
+            src={deal.image}
+            alt=""
+            className="h-full w-full object-contain transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <span className="text-[10px] font-bold text-slate-400">No image</span>
+        )}
+      </div>
+
+      <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] text-[13px] font-bold text-slate-800">{deal.name}</h3>
+
+      <p className="mb-1 text-[10px] font-medium text-slate-400">*best price starts from</p>
+
+      <div className="mb-4 flex items-baseline gap-2">
+        <span className="text-sm font-extrabold text-green-600">{deal.price}</span>
+        <span className="text-[11px] font-medium text-slate-400 line-through">{deal.originalPrice}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full items-center justify-center gap-1.5 rounded-full border border-slate-900 py-1.5 text-[10px] font-bold text-slate-900 transition-all hover:bg-slate-900 hover:text-white"
+      >
+        <Plus className="h-3 w-3 stroke-[2.5]" />
+        add to cart
+      </button>
+    </>
+  )
+}
+
+export function FlashDealsSection() {
   const navigate = useNavigate()
   const scrollRef = useRef(null)
   const [activeTab, setActiveTab] = useState(0)
   const [deals, setDeals] = useState(FLASH_DEALS_FALLBACK)
   const [loading, setLoading] = useState(true)
   const [usedFallback, setUsedFallback] = useState(true)
-  const [title, setTitle] = useState(propTitle || 'Brand New Phones')
+  const [title, setTitle] = useState('Hurry Up! Get Up to 40% Off')
 
   useEffect(() => {
     let cancelled = false
@@ -83,9 +154,9 @@ export function FlashDealsSection({ title: propTitle }) {
     getFlashDealSection()
       .then((section) => {
         if (cancelled) return
-        if (section?.title && !propTitle) setTitle(String(section.title))
+        if (section?.title) setTitle(String(section.title))
       })
-      .catch(() => { })
+      .catch(() => {})
     getFlashDeals()
       .then((list) => {
         if (cancelled) return
@@ -129,117 +200,62 @@ export function FlashDealsSection({ title: propTitle }) {
     }
   }
 
-  const CardInner = ({ deal }) => (
-    <>
-      <div className="relative mb-3 flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[1.5rem] bg-gray-50 p-4 transition-all duration-500 group-hover:bg-gray-100">
-        <div className="absolute left-0 top-3 z-10">
-          <span className="bg-[#ff4d4d] px-3 py-1.5 text-[11px] font-bold text-white rounded-r-lg">
-            {deal.discount}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-gray-200/50 text-slate-700 transition-all hover:bg-red-600 hover:text-white"
-          aria-label="Add to wishlist"
-        >
-          <Heart className="h-4 w-4" />
-        </button>
-
-        {deal.image ? (
-          <img
-            src={deal.image}
-            alt=""
-            className="h-full w-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110"
-            loading="lazy"
-          />
-        ) : (
-          <span className="text-[10px] font-bold text-slate-300">No Image</span>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col items-center text-center px-1 pb-2">
-        <h3 className="mb-1 line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-slate-900 transition-colors group-hover:text-red-600">
-          {deal.name}
-        </h3>
-
-        <div className="mt-auto">
-          <p className="text-[11px] font-medium text-slate-400 mb-0.5">*best price starts from</p>
-          <div className="flex items-center justify-center gap-2">
-            <span className="text-xl font-bold text-red-600 tracking-tight">{deal.price}</span>
-            <span className="text-sm font-medium text-slate-400 line-through">
-              {deal.originalPrice}
-            </span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-full border-2 border-red-600 bg-red-600 py-2 text-[12px] font-bold text-white transition-all duration-300 hover:bg-red-700 hover:border-red-700"
-        >
-          <Plus className="h-4 w-4" />
-          add to cart
-        </button>
-      </div>
-    </>
-  )
-
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-b from-red-950 via-zinc-950 to-black pt-10 pb-6">
+    <section className="w-full border-y border-red-950/40 bg-gradient-to-b from-[#6f0006] via-[#230001] to-black py-10">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-              {title}
-            </h2>
-            <div className="mt-1 h-[3px] w-[50px] bg-red-600" />
-          </div>
-          
-          <div className="flex gap-2">
-             <button
-              type="button"
-              onClick={() => scroll('left')}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-red-600 hover:border-red-600 active:scale-90"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
+        <div className="mb-6 flex justify-center gap-2">
+          {[0, 1, 2].map((i) => (
             <button
+              key={i}
               type="button"
-              onClick={() => scroll('right')}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-red-600 hover:border-red-600 active:scale-90"
-              aria-label="Scroll right"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+              aria-label={`Slide ${i + 1}`}
+              onClick={() => setActiveTab(i)}
+              className={`h-2.5 w-2.5 rounded-full transition-colors ${i === activeTab ? 'bg-red-500' : 'bg-white/35'}`}
+            />
+          ))}
         </div>
+
+        <h2 className="mb-8 text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h2>
 
         {loading ? (
           <div className="flex gap-4 overflow-hidden pb-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={`sk-${i}`}
-                className="h-[300px] w-[170px] shrink-0 animate-pulse rounded-2xl bg-slate-100 sm:w-[190px] md:w-[210px]"
+                className="h-[280px] w-[170px] shrink-0 animate-pulse rounded-2xl bg-white/80 sm:w-[190px] md:w-[210px]"
               />
             ))}
           </div>
         ) : deals.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-12 text-center">
-             <p className="text-sm font-extrabold text-slate-400">No active flash deals.</p>
-          </div>
+          <p className="rounded-2xl border border-dashed border-red-900/50 bg-black/30 py-12 text-center text-sm font-semibold text-white/70">
+            No flash deals yet. Add products in Admin → Offers &amp; Coupons → Homepage flash deals.
+          </p>
         ) : (
           <div className="relative">
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              className="absolute -left-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/20 lg:flex"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              className="absolute -right-4 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-white/20 lg:flex"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
 
             <div
               ref={scrollRef}
-              className="flex gap-4 overflow-x-auto pb-4 pt-1 transition-all duration-300 scrollbar-hide"
+              className="flex gap-4 overflow-x-auto pb-4 transition-all duration-300 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {deals.map((deal) => {
                 const wrapClass =
-                  'group relative flex w-[220px] shrink-0 flex-col rounded-[2rem] bg-white p-3.5 shadow-sm transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/20 sm:w-[240px] md:w-[260px]'
+                  'group relative flex w-[170px] shrink-0 flex-col rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-md sm:w-[190px] md:w-[210px]'
                 const clickable = Boolean(deal.linkUrl)
                 return (
                   <div
@@ -256,7 +272,7 @@ export function FlashDealsSection({ title: propTitle }) {
                       }
                     }}
                   >
-                    <CardInner deal={deal} />
+                    <FlashDealCardInner deal={deal} />
                   </div>
                 )
               })}
@@ -264,6 +280,11 @@ export function FlashDealsSection({ title: propTitle }) {
           </div>
         )}
 
+        {!loading && usedFallback ? (
+          <p className="mt-2 text-center text-[11px] text-white/50">
+            Could not load deals — showing samples. Check API or add deals in Admin.
+          </p>
+        ) : null}
       </div>
     </section>
   )

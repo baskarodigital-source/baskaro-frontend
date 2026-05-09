@@ -9,11 +9,16 @@ import MarketplacePage from './pages/MarketplacePage'
 import LoginPage from './pages/LoginPage'
 import UserDashboard from './pages/UserDashboard'
 import SellPhonePage from './pages/SellPhonePage'
+import SellCategoryPage from './pages/SellCategoryPage'
+import SellSubPage from './pages/SellSubPage'
 import AdminDashboard from './pages/AdminDashboard'
 import BuyAccessoriesPage from './pages/BuyAccessoriesPage'
 import RepairPhonePage from './pages/RepairPhonePage'
 import FindNewPhonePage from './pages/FindNewPhonePage'
+import FindNewGadgetsPage from './pages/FindNewGadgetsPage'
+import FindNewGadgetsSectionPage from './pages/FindNewGadgetsSectionPage'
 import BuyPreOwnedPage from './pages/BuyPreOwnedPage'
+import BuyPreOwnedExplorePage from './pages/BuyPreOwnedExplorePage'
 import NearbyStoresPage from './pages/NearbyStoresPage'
 import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
@@ -27,6 +32,7 @@ import ReferEarnPage from './pages/ReferEarnPage'
 import CareersPage from './pages/CareersPage'
 import PressReleasesPage from './pages/PressReleasesPage'
 import ProfilePage from './pages/ProfilePage'
+import InfoPage from './pages/InfoPage'
 
 function NotFoundPage() {
   return (
@@ -61,11 +67,17 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/dashboard" element={<UserDashboard />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/sell/sub" element={<SellSubPage />} />
+                    <Route path="/sell/:category" element={<SellCategoryPage />} />
                     <Route path="/sell-phone" element={<SellPhonePage />} />
                     <Route path="/buy-accessories" element={<BuyAccessoriesPage />} />
+                    <Route path="/buy-pre-owned/:kind/:slug" element={<BuyPreOwnedExplorePage />} />
                     <Route path="/buy-pre-owned" element={<BuyPreOwnedPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/repair-phone" element={<RepairPhonePage />} />
+                    <Route path="/find-new-gadgets" element={<FindNewGadgetsPage />} />
+                    <Route path="/find-new-gadgets/explore/:slug" element={<FindNewGadgetsSectionPage />} />
+                    <Route path="/find-new-gadgets/:slug" element={<FindNewGadgetsSectionPage />} />
                     <Route path="/find-new-phone" element={<FindNewPhonePage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
@@ -73,10 +85,17 @@ export default function App() {
                     <Route path="/product/:id" element={<ProductDetailsPage />} />
                     <Route path="/store/:storeId" element={<ViewDetailsPage />} />
                     <Route path="/about" element={<AboutPage />} />
+                    <Route path="/new-offers" element={<InfoPage />} />
+                    <Route path="/partner" element={<InfoPage />} />
+                    <Route path="/contact" element={<InfoPage />} />
+                    <Route path="/contact-us" element={<InfoPage />} />
                     <Route path="/warranty-policy" element={<WarrantyPolicyPage />} />
                     <Route path="/refer-earn" element={<ReferEarnPage />} />
                     <Route path="/careers" element={<CareersPage />} />
+                    <Route path="/articles" element={<InfoPage />} />
+                    <Route path="/become-partner" element={<InfoPage />} />
                     <Route path="/press-releases" element={<PressReleasesPage />} />
+                    <Route path="/terms-and-conditions" element={<InfoPage />} />
                     <Route path="/landing" element={<Navigate to="/" replace />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>

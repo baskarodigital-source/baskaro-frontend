@@ -102,7 +102,7 @@ export const MARKETPLACE_PORTAL_CONTENT = {
  */
 export function TopSellingBrands({
   brands,
-  title = 'Top Selling Brands',
+  title = 'Shop Phone by Brand',
   getHref = (brand) => defaultBrandPagePath(brand.name),
   className = '',
 }) {
@@ -137,85 +137,103 @@ export function TopSellingBrands({
     scrollerRef.current?.scrollBy({ left: 320, behavior: 'smooth' })
   }
 
-  const BRAND_BGS = {
-    Samsung: 'bg-slate-50',
-    OPPO: 'bg-emerald-50',
-    Itel: 'bg-orange-50',
-    Nokia: 'bg-indigo-50',
-    Realme: 'bg-yellow-50',
-    Apple: 'bg-zinc-100',
-    Xiaomi: 'bg-orange-100',
-    OnePlus: 'bg-rose-50',
-    Tecno: 'bg-blue-50',
-    Vivo: 'bg-sky-50',
-    'Google Pixel': 'bg-slate-100',
-  }
-
   return (
     <div className={className}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight sm:text-3xl">{title}</h2>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{title}</h2>
+        <div className="hidden items-center gap-2 sm:flex">
           <button
             type="button"
             onClick={scrollPrev}
             disabled={!canScrollLeft}
-            className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
-              canScrollLeft ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
-            }`}
+            aria-label="Scroll to previous brands"
+            className={[
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition',
+              canScrollLeft
+                ? 'border-slate-300 text-slate-600 hover:border-slate-400'
+                : 'cursor-not-allowed border-slate-200 text-slate-300 opacity-70',
+            ].join(' ')}
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft className="h-4 w-4" strokeWidth={2.2} aria-hidden />
           </button>
           <button
             type="button"
             onClick={scrollNext}
             disabled={!canScrollRight}
-            className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
-              canScrollRight ? 'border-slate-300 bg-white text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300'
-            }`}
+            aria-label="Scroll to more brands"
+            className={[
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition',
+              canScrollRight
+                ? 'border-slate-300 text-slate-600 hover:border-slate-400'
+                : 'cursor-not-allowed border-slate-200 text-slate-300 opacity-70',
+            ].join(' ')}
           >
-            <ChevronRight size={16} />
+            <ChevronRight className="h-4 w-4" strokeWidth={2.2} aria-hidden />
           </button>
         </div>
       </div>
 
-      <div
-        ref={scrollerRef}
-        className="flex gap-6 overflow-x-auto pb-4 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {brands.map((brand) => {
-          const logoSrc = brand.logoUrl || brand.logo || ''
-          const key = brand.id || brand.slug || brand.name
-          const bgColor = BRAND_BGS[brand.name] || 'bg-slate-50'
-
-          return (
-            <Link
-              key={key}
-              to={getHref(brand)}
-              className="group flex min-w-[100px] shrink-0 flex-col items-center text-center sm:min-w-[120px]"
-            >
-              <div
-                className={`relative flex h-20 w-20 items-center justify-center rounded-full transition-all duration-300 group-hover:scale-105 group-hover:shadow-md sm:h-24 sm:w-24 ${bgColor}`}
+      <div className="mt-7 flex items-center gap-4 relative">
+        <button
+          type="button"
+          onClick={scrollPrev}
+          disabled={!canScrollLeft}
+          aria-label="Scroll to previous brands"
+          className={[
+            'hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition lg:inline-flex',
+            canScrollLeft
+              ? 'border-slate-300 text-slate-700 hover:border-slate-400'
+              : 'cursor-not-allowed border-slate-200 text-slate-300 opacity-70',
+          ].join(' ')}
+        >
+          <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+        </button>
+        <div
+          ref={scrollerRef}
+          className="flex flex-1 gap-7 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {brands.map((brand) => {
+            const logoSrc = brand.logoUrl || brand.logo || ''
+            const key = brand.id || brand.slug || brand.name
+            return (
+              <Link
+                key={key}
+                to={getHref(brand)}
+                className="group flex min-w-[96px] shrink-0 flex-col items-center text-center"
               >
-                {logoSrc ? (
-                  <img
-                    src={logoSrc}
-                    alt={brand.name}
-                    loading="lazy"
-                    className="h-12 w-12 object-contain sm:h-14 sm:w-14"
-                  />
-                ) : (
-                  <span className="text-sm font-black uppercase text-slate-400">
-                    {(brand.name || '?').slice(0, 2)}
-                  </span>
-                )}
-              </div>
-              <span className="mt-3 text-xs font-bold text-slate-600 transition-colors group-hover:text-red-600 sm:text-sm">
-                {brand.name}
-              </span>
-            </Link>
-          )
-        })}
+                <div className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#f6f3ec] transition group-hover:-translate-y-0.5">
+                  {logoSrc ? (
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      loading="lazy"
+                      className="h-[52px] w-[52px] object-contain"
+                    />
+                  ) : (
+                    <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-slate-100 text-xs font-black uppercase text-slate-500">
+                      {(brand.name || '?').slice(0, 2)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-3 text-base font-bold text-slate-600 group-hover:text-slate-900">{brand.name}</p>
+              </Link>
+            )
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={scrollNext}
+          disabled={!canScrollRight}
+          aria-label="Scroll to more brands"
+          className={[
+            'hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white shadow-sm transition lg:inline-flex',
+            canScrollRight
+              ? 'border-slate-300 text-slate-700 hover:border-slate-400'
+              : 'cursor-not-allowed border-slate-200 text-slate-300 opacity-70',
+          ].join(' ')}
+        >
+          <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
+        </button>
       </div>
     </div>
   )

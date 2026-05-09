@@ -8,7 +8,7 @@ export function DownloadAppBanner({
 }) {
   return (
     <section className="w-full pb-10">
-      <div className="w-full overflow-hidden bg-[#43c3bb] px-4 py-8 shadow-sm sm:px-6 sm:py-10 lg:px-10 xl:px-16">
+      <div className="w-full overflow-hidden bg-[#b00008] px-4 py-8 shadow-sm sm:px-6 sm:py-10 lg:px-10 xl:px-16">
         <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <h2 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">

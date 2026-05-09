@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { Star, ShoppingCart, Check } from 'lucide-react'
+import { Star, ShoppingCart, Check, Heart } from 'lucide-react'
 import { useState } from 'react'
 import { useCart } from '../context/CartContext'
+import { useWishlist } from '../context/WishlistContext'
 
 const TAG_STYLES = [
   'bg-amber-50 text-amber-800 ring-amber-100',
@@ -65,7 +66,15 @@ export function ProductCard({
 }) {
   const navigate = useNavigate()
   const { addToCart } = useCart()
+  const { isWishlisted, toggleWishlist } = useWishlist()
   const [isAdding, setIsAdding] = useState(false)
+  const wishlistKey = id || title
+  const wishlisted = wishlistKey ? isWishlisted(wishlistKey) : false
+
+  const priceForWishlist = String(price || '')
+    .replace(/₹/g, '')
+    .replace(/\s/g, '')
+    .trim()
   const tags = normalizeTags(tag)
   const badgeDiscount = discountBadgeText(discount)
   const priceDiscountPct = discountPriceLabel(discount)
@@ -76,42 +85,128 @@ export function ProductCard({
 
   return (
     <article
-      onClick={onCtaClick ?? (() => id && navigate(`/product/${id}`))}
-      className={`group cursor-pointer flex w-[220px] shrink-0 flex-col rounded-[2rem] bg-white p-3 shadow-sm transition-all duration-300 hover:shadow-xl sm:w-[240px] md:w-[260px] ${className}`}
+      className={`group flex w-[260px] shrink-0 flex-col rounded-2xl border border-slate-100/90 bg-white p-4 shadow-md transition-all duration-300 hover:z-10 hover:scale-[1.02] hover:shadow-xl ${className}`}
     >
-      <div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-[1.5rem] bg-gray-100 p-6 transition-all duration-500 group-hover:bg-gray-200">
+      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100/80 p-4 ring-1 ring-inset ring-slate-100/80">
         {badgeDiscount ? (
-          <span className="absolute left-3 top-3 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm">
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm">
             {badgeDiscount}
           </span>
         ) : null}
-        
+        {rating != null && rating !== '' ? (
+          <span className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200/80">
+            <Star
+              className="h-3 w-3 fill-amber-400 text-amber-400"
+              strokeWidth={0}
+              aria-hidden
+            />
+            <span className="tabular-nums">{rating}</span>
+          </span>
+        ) : null}
+        {wishlistKey ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleWishlist({
+                id: wishlistKey,
+                name: title,
+                price: priceForWishlist,
+                img: image,
+              })
+            }}
+            className={`absolute bottom-2 right-2 z-10 rounded-full p-2 shadow-md ring-1 transition ${
+              wishlisted ? 'bg-red-50 text-red-600 ring-red-200' : 'bg-white/95 text-slate-500 ring-slate-200 hover:text-red-600'
+            }`}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart className={`h-4 w-4 ${wishlisted ? 'fill-red-600 text-red-600' : ''}`} strokeWidth={2} />
+          </button>
+        ) : null}
         <div className="flex h-full w-full items-center justify-center">
           <img
             src={image}
             alt={title}
-            className="max-h-full max-w-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
+            className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
         </div>
       </div>
 
-      <div className="flex flex-col items-center text-center px-2 pb-2">
-        <h3
-          title={title}
-          className="line-clamp-2 min-h-[2.5rem] text-[16px] font-bold leading-tight tracking-tight text-[#1e1b4b] transition-colors group-hover:text-red-600"
-        >
-          {title}
-        </h3>
+      <h3
+        title={title}
+        className="line-clamp-2 min-h-[2.75rem] text-[15px] font-semibold leading-snug tracking-tight text-slate-900"
+      >
+        {title}
+      </h3>
 
-        <div className="mt-2 flex items-center justify-center gap-2">
-          <span className="text-xl font-bold text-red-600">{price}</span>
-          {showOriginal ? (
-            <span className="text-sm font-medium text-slate-400 line-through">
-              {originalPrice}
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-lg font-bold text-slate-900">{price}</span>
+        {showOriginal ? (
+          <span className="text-sm font-medium text-slate-400 line-through">
+            {originalPrice}
+          </span>
+        ) : null}
+        {priceDiscountPct && showOriginal ? (
+          <span className="text-sm font-semibold text-red-600">{priceDiscountPct}</span>
+        ) : null}
+      </div>
+
+      {tags.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {tags.map((t, i) => (
+            <span
+              key={`${t}-${i}`}
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${TAG_STYLES[i % TAG_STYLES.length]}`}
+            >
+              {t}
             </span>
-          ) : null}
+          ))}
         </div>
+      ) : null}
+
+
+
+      <div className="mt-auto pt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onCtaClick ?? (() => id && navigate(`/product/${id}`))}
+          className="flex-1 flex items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 py-2.5 text-xs font-bold text-slate-600 transition-all duration-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+        >
+          View
+        </button>
+        <button
+          type="button"
+          disabled={isAdding}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsAdding(true);
+            addToCart({
+              id: id || title,
+              name: title,
+              price: price,
+              img: image
+            });
+            setTimeout(() => setIsAdding(false), 1500);
+          }}
+          className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border transition-all duration-300 py-2.5 text-xs font-black uppercase tracking-tight ${
+            isAdding 
+            ? 'bg-green-600 border-green-600 text-white' 
+            : 'border-rose-600 bg-white text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'
+          }`}
+        >
+          {isAdding ? (
+            <>
+              <Check size={14} strokeWidth={3} />
+              <span>Added</span>
+            </>
+          ) : (
+            <>
+              <ShoppingCart size={14} strokeWidth={2.5} />
+              <span>Add</span>
+            </>
+          )}
+        </button>
       </div>
     </article>
   )
