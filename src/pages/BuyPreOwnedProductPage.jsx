@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   Heart,
   Share2,
@@ -19,6 +19,7 @@ import {
   Star,
 } from 'lucide-react'
 import { gPhoto } from '../constants/googleImages'
+import { getOffers } from '../lib/api/baskaroApi.js'
 
 function rupee(n) {
   return Number(n || 0).toLocaleString('en-IN')
@@ -205,8 +206,14 @@ function buildGradeExplainedModel() {
 
 const GRADE_EXPLAINED = buildGradeExplainedModel()
 
+function isMongoObjectId(value) {
+  return /^[a-f0-9]{24}$/i.test(String(value || '').trim())
+}
+
 export default function BuyPreOwnedProductPage() {
+  const { productId } = useParams()
   const [searchParams] = useSearchParams()
+  const modelIdFromQuery = searchParams.get('modelId') || ''
   const name = searchParams.get('name') || 'Refurbished Device'
   const img = searchParams.get('img') || gPhoto(0)
   const rating = searchParams.get('rating') || '4.4'
@@ -218,10 +225,32 @@ export default function BuyPreOwnedProductPage() {
   const [condition, setCondition] = useState('Fair')
   const [storage, setStorage] = useState('8GB / 128GB')
   const [color, setColor] = useState('Sierra Black')
+  const [offers, setOffers] = useState([])
+  const [offersLoading, setOffersLoading] = useState(true)
 
   const gradeContent = GRADE_EXPLAINED[condition] ?? GRADE_EXPLAINED.Fair
 
   const discountPct = Math.round(((mrp - price) / mrp) * 100)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadOffers() {
+      setOffersLoading(true)
+      try {
+        const params = isMongoObjectId(modelIdFromQuery) ? { modelId: modelIdFromQuery } : {}
+        const list = await getOffers(params)
+        if (!cancelled) setOffers(Array.isArray(list) ? list : [])
+      } catch {
+        if (!cancelled) setOffers([])
+      } finally {
+        if (!cancelled) setOffersLoading(false)
+      }
+    }
+    loadOffers()
+    return () => {
+      cancelled = true
+    }
+  }, [modelIdFromQuery, productId])
 
   return (
     <div className="min-h-screen bg-white">
@@ -386,6 +415,30 @@ export default function BuyPreOwnedProductPage() {
               View Benefits of buying a Refurbished Device
               <ChevronRightCircle size={16} />
             </button>
+
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Available Offers</h3>
+              {offersLoading ? (
+                <p className="mt-2 text-sm font-medium text-slate-500">Loading offers...</p>
+              ) : offers.length > 0 ? (
+                <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+                  {offers.map((offer, i) => (
+                    <article
+                      key={offer?._id || `${offer?.title || 'offer'}-${i}`}
+                      className="min-w-[260px] rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-800">{offer.title}</p>
+                      <p className="mt-1 text-sm text-slate-600">{offer.desc}</p>
+                      <div className="mt-2 border-t border-dashed border-slate-300 pt-2 text-xs font-mono font-bold uppercase tracking-wide text-slate-500">
+                        {offer.code || 'No code required'}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm font-medium text-slate-500">No offers available right now.</p>
+              )}
+            </div>
 
             <div className="border-t border-slate-200 pt-4">
               <h3 className="text-base font-semibold text-slate-900 sm:text-lg">Available Payment Methods</h3>

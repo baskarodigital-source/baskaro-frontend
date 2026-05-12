@@ -117,6 +117,12 @@ const HERO_CAROUSEL_FALLBACK = [
   },
 ]
 
+const PROMO_BANNERS_FALLBACK = [
+  { id: 'promo-vivo', img: promoVivoBanner, alt: 'vivo T5x 5G', to: '/find-new-phone' },
+  { id: 'promo-oppo', img: promoOppoBanner, alt: 'OPPO A6 Pro 5G', to: '/find-new-phone' },
+  { id: 'promo-redmi', img: promoRedmiBanner, alt: 'REDMI Note 15 5G', to: '/find-new-phone' },
+]
+
 function resolveHeroImageUrl(url) {
   if (!url || typeof url !== 'string') return ''
   const t = url.trim()
@@ -134,8 +140,11 @@ function sanitizeHeroBgClass(raw) {
 
 function mapHeroBannersFromApi(list) {
   if (!Array.isArray(list)) return []
+  const heroPositions = new Set(['HOME_HERO', 'HOMEPAGE', 'Homepage'])
   return list
     .map((b) => {
+      const position = b?.position != null ? String(b.position).trim() : ''
+      if (position && !heroPositions.has(position)) return null
       const id = b._id != null ? String(b._id) : b.id
       const img = resolveHeroImageUrl(b.imageUrl)
       const heading = b.title != null ? String(b.title).trim() : ''
@@ -153,6 +162,32 @@ function mapHeroBannersFromApi(list) {
       }
     })
     .filter(Boolean)
+}
+
+function mapPromoBannersFromApi(list) {
+  if (!Array.isArray(list)) return []
+  const promoPositions = new Set(['HOME_TOP', 'HOME_MIDDLE', 'HOME_BOTTOM'])
+  const order = { HOME_TOP: 0, HOME_MIDDLE: 1, HOME_BOTTOM: 2 }
+
+  return list
+    .map((b) => {
+      const position = b?.position != null ? String(b.position).trim() : ''
+      if (position && !promoPositions.has(position)) return null
+      const id = b?._id != null ? String(b._id) : String(b?.id || '')
+      const img = resolveHeroImageUrl(b?.imageUrl)
+      if (!id || !img) return null
+      const alt = String(b?.title || b?.subtitle || 'Promotional banner').trim()
+      const to = String(b?.redirectUrl || '/find-new-phone').trim() || '/find-new-phone'
+      return {
+        id,
+        img,
+        alt,
+        to,
+        _sort: order[position] ?? 99,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a._sort - b._sort)
 }
 
 const TRUST_TESTIMONIALS = [
@@ -295,7 +330,7 @@ const PRE_OWNED_TOP_BRANDS = [
   'All Brands',
 ]
 
-const MORE_CATEGORIES = [
+const POPULAR_CATEGORIES_FALLBACK = [
   { title: 'Sell Phone', img: gPhoto(0), path: '/sell/phone' },
   { title: 'Sell Tablet', img: gPhoto(1), path: '/sell/tablet' },
   { title: 'Sell Smartwatch', img: gPhoto(2), path: '/sell/smartwatch' },
@@ -1210,6 +1245,7 @@ export default function LandingPage() {
   const [navDropdownOpen, setNavDropdownOpen] = useState(null)
 
   const [heroSlides, setHeroSlides] = useState(HERO_CAROUSEL_FALLBACK)
+  const [promoBanners, setPromoBanners] = useState(PROMO_BANNERS_FALLBACK)
   const [heroSlide, setHeroSlide] = useState(0)
   const heroSlideCount = heroSlides.length
   const servicesRailRef = useRef(null)
@@ -1227,6 +1263,20 @@ export default function LandingPage() {
     if (servicesLoading) return []
     return [...services.map((s) => ({ kind: 'link', id: s.id, title: s.label, img: s.imageUrl, path: s.path })), { kind: 'more', id: 'more', title: 'More' }]
   }, [services, servicesLoading])
+
+  const popularCategories = useMemo(() => {
+    if (Array.isArray(services) && services.length > 0) {
+      return services
+        .filter((s) => s?.label && s?.path)
+        .map((s) => ({
+          id: String(s.id || s.label),
+          title: String(s.label),
+          img: s.imageUrl || serviceThumbForLabel(s.label),
+          path: String(s.path),
+        }))
+    }
+    return POPULAR_CATEGORIES_FALLBACK.map((c) => ({ ...c, id: c.title }))
+  }, [services])
 
   const buyPreOwnedCarouselProducts = useMemo(() => {
     if (featuredPreOwnedLoading) return []
@@ -1303,16 +1353,21 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cancelled = false
-    getBanners({ position: 'HOME_HERO' })
+    getBanners({ active: true })
       .then((list) => {
         if (cancelled) return
-        const mapped = mapHeroBannersFromApi(Array.isArray(list) ? list : [])
-        if (mapped.length) {
-          setHeroSlides(mapped)
+        const arr = Array.isArray(list) ? list : []
+        const mappedHero = mapHeroBannersFromApi(arr)
+        if (mappedHero.length) {
+          setHeroSlides(mappedHero)
           setHeroSlide(0)
         }
+        const mappedPromo = mapPromoBannersFromApi(arr)
+        setPromoBanners(mappedPromo.length ? mappedPromo : PROMO_BANNERS_FALLBACK)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setPromoBanners(PROMO_BANNERS_FALLBACK)
+      })
     return () => {
       cancelled = true
     }
@@ -1720,9 +1775,9 @@ export default function LandingPage() {
 
             <div className="h-full overflow-y-auto px-4 py-5">
               <div className="grid grid-cols-2 gap-6">
-                {MORE_CATEGORIES.map((c) => (
+                {popularCategories.map((c) => (
                   <button
-                    key={c.title}
+                    key={c.id}
                     type="button"
                     className="group"
                     onClick={() => {
@@ -1937,30 +1992,16 @@ export default function LandingPage() {
       <section className="w-full py-6 sm:py-10">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
           <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoVivoBanner}
-                alt="vivo T5x 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoOppoBanner}
-                alt="OPPO A6 Pro 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoRedmiBanner}
-                alt="REDMI Note 15 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
+            {promoBanners.map((banner) => (
+              <Link key={banner.id} to={banner.to} className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+                <img
+                  src={banner.img}
+                  alt={banner.alt}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -1997,9 +2038,9 @@ export default function LandingPage() {
             className="overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             <div className="flex min-w-max gap-6">
-              {MORE_CATEGORIES.map((c) => (
+              {popularCategories.map((c) => (
                 <button
-                  key={`popular-${c.title}`}
+                  key={`popular-${c.id}`}
                   type="button"
                   onClick={() => c.path && navigate(c.path)}
                   className="group flex w-[120px] shrink-0 flex-col items-center text-center"
@@ -2025,37 +2066,24 @@ export default function LandingPage() {
       <CarouselSection
         title="Trending Electronics"
         viewAllText="View All"
-        products={PRE_OWNED_DEVICES_CAROUSEL}
+        products={buyPreOwnedCarouselProducts}
+        loading={featuredPreOwnedLoading}
       />
 
       {/* Promotional Banners (after Trending Electronics) */}
       <section className="w-full py-6 sm:py-10">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
           <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoVivoBanner}
-                alt="vivo T5x 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoOppoBanner}
-                alt="OPPO A6 Pro 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoRedmiBanner}
-                alt="REDMI Note 15 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
+            {promoBanners.map((banner) => (
+              <Link key={`${banner.id}-after-trending`} to={banner.to} className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+                <img
+                  src={banner.img}
+                  alt={banner.alt}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
+            ))}
           </div>
         </div>
       </section>
