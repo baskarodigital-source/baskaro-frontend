@@ -60,6 +60,7 @@ export function ProductCard({
   rating,
   tag,
   brand = 'BASKARO',
+  viewPath = '',
   ctaLabel = 'View Details',
   onCtaClick,
   className = '',
@@ -170,7 +171,13 @@ export function ProductCard({
       <div className="mt-auto pt-3 flex gap-2">
         <button
           type="button"
-          onClick={onCtaClick ?? (() => id && navigate(`/product/${id}`))}
+          onClick={
+            onCtaClick ??
+            (() => {
+              if (viewPath) navigate(viewPath)
+              else if (id) navigate(`/product/${id}`)
+            })
+          }
           className="flex-1 flex items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 py-2.5 text-xs font-bold text-slate-600 transition-all duration-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
         >
           View

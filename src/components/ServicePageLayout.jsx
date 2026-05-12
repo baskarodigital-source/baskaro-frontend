@@ -80,10 +80,14 @@ export function ServicePageLayout({
   howItWorksTitle = 'How it works',
   howItWorks,
   whyUs,
+  /** When true, show skeleton cards in the “Why Us” rail until `whyUs` is ready */
+  whyUsLoading = false,
   showHotDeals = true,
   hotDealsTitle = 'Hot Deals',
   topBrands,
   topBrandsTitle = 'Top Selling Brands',
+  /** When `topBrands` is an array from the parent, set true while catalog is loading */
+  topBrandsLoading = false,
   /** When true, show the trade-in price table (dummy rows unless `topSellingPhones` is set) */
   showTopSellingPhones = false,
   topSellingPhones,
@@ -97,7 +101,9 @@ export function ServicePageLayout({
   heroImageUrl = '',
   heroImageAlt = '',
 }) {
-  const effectiveTopBrands = topBrands?.length ? topBrands : DUMMY_TOP_SELLING_BRANDS
+  const useLiveTopBrands = topBrands != null && Array.isArray(topBrands)
+  const effectiveTopBrands = useLiveTopBrands ? topBrands : DUMMY_TOP_SELLING_BRANDS
+  const effectiveTopBrandsLoading = Boolean(useLiveTopBrands && topBrandsLoading)
   const effectiveTopSellingPhones =
     showTopSellingPhones && (topSellingPhones?.length ? topSellingPhones : DUMMY_TOP_SELLING_PHONES)
   const [openFaq, setOpenFaq] = useState(0)
@@ -339,39 +345,54 @@ export function ServicePageLayout({
             role="list"
             aria-label="Why choose us"
           >
-            {whyUs.map((item, idx) => {
-              const title = typeof item === 'string' ? item : item.title
-              const description =
-                typeof item === 'string'
-                  ? `${item} with transparent and trusted experience.`
-                  : item.description
-              const Icon = WHY_US_ICONS[idx % WHY_US_ICONS.length]
-              return (
-                <div
-                  key={`${title}-${idx}`}
-                  role="listitem"
-                  className="flex w-[min(100%,19.5rem)] shrink-0 gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)] sm:w-80 sm:gap-5 sm:p-5"
-                >
+            {whyUsLoading
+              ? Array.from({ length: 4 }).map((_, idx) => (
                   <div
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100 sm:h-14 sm:w-14"
-                    aria-hidden
+                    key={`why-us-skel-${idx}`}
+                    role="presentation"
+                    className="flex w-[min(100%,19.5rem)] shrink-0 gap-4 rounded-2xl border border-zinc-700 bg-zinc-900/40 p-4 sm:w-80 sm:gap-5 sm:p-5"
                   >
-                    <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.65} />
+                    <div className="h-12 w-12 shrink-0 animate-pulse rounded-xl bg-zinc-700 sm:h-14 sm:w-14" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-3/4 animate-pulse rounded bg-zinc-700" />
+                      <div className="h-3 w-full animate-pulse rounded bg-zinc-800" />
+                      <div className="h-3 w-5/6 animate-pulse rounded bg-zinc-800" />
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-bold text-slate-900 sm:text-lg">{title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{description}</p>
-                  </div>
-                </div>
-              )
-            })}
+                ))
+              : whyUs.map((item, idx) => {
+                  const title = typeof item === 'string' ? item : item.title
+                  const description =
+                    typeof item === 'string'
+                      ? `${item} with transparent and trusted experience.`
+                      : item.description
+                  const Icon = WHY_US_ICONS[idx % WHY_US_ICONS.length]
+                  return (
+                    <div
+                      key={`${title}-${idx}`}
+                      role="listitem"
+                      className="flex w-[min(100%,19.5rem)] shrink-0 gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.35)] sm:w-80 sm:gap-5 sm:p-5"
+                    >
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100 sm:h-14 sm:w-14"
+                        aria-hidden
+                      >
+                        <Icon className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.65} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-bold text-slate-900 sm:text-lg">{title}</h3>
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{description}</p>
+                      </div>
+                    </div>
+                  )
+                })}
           </div>
         </div>
       </section>
 
       <section className="w-full px-4 pb-8 sm:pb-12">
         <div className="mx-auto max-w-7xl">
-          <TopSellingBrands brands={effectiveTopBrands} title={topBrandsTitle} />
+          <TopSellingBrands brands={effectiveTopBrands} loading={effectiveTopBrandsLoading} title={topBrandsTitle} />
         </div>
       </section>
 

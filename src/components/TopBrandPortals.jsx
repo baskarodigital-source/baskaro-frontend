@@ -100,8 +100,28 @@ export const MARKETPLACE_PORTAL_CONTENT = {
 /**
  * Horizontal “Top Selling Brands” row — same card layout as reference UI; content via `brands` only.
  */
+function BrandRailSkeleton({ count = 10 }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={`brand-skel-${i}`}
+          className="flex min-w-[96px] shrink-0 flex-col items-center text-center"
+          aria-hidden
+        >
+          <div className="flex h-[92px] w-[92px] animate-pulse items-center justify-center rounded-full bg-[#f6f3ec]">
+            <div className="h-[52px] w-[52px] rounded-full bg-slate-200/80" />
+          </div>
+          <div className="mt-3 h-4 w-16 max-w-full animate-pulse rounded bg-slate-200" />
+        </div>
+      ))}
+    </>
+  )
+}
+
 export function TopSellingBrands({
   brands,
+  loading = false,
   title = 'Shop Phone by Brand',
   getHref = (brand) => defaultBrandPagePath(brand.name),
   className = '',
@@ -192,33 +212,39 @@ export function TopSellingBrands({
           ref={scrollerRef}
           className="flex flex-1 gap-7 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {brands.map((brand) => {
-            const logoSrc = brand.logoUrl || brand.logo || ''
-            const key = brand.id || brand.slug || brand.name
-            return (
-              <Link
-                key={key}
-                to={getHref(brand)}
-                className="group flex min-w-[96px] shrink-0 flex-col items-center text-center"
-              >
-                <div className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#f6f3ec] transition group-hover:-translate-y-0.5">
-                  {logoSrc ? (
-                    <img
-                      src={logoSrc}
-                      alt=""
-                      loading="lazy"
-                      className="h-[52px] w-[52px] object-contain"
-                    />
-                  ) : (
-                    <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-slate-100 text-xs font-black uppercase text-slate-500">
-                      {(brand.name || '?').slice(0, 2)}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3 text-base font-bold text-slate-600 group-hover:text-slate-900">{brand.name}</p>
-              </Link>
-            )
-          })}
+          {loading ? (
+            <BrandRailSkeleton count={10} />
+          ) : brands.length === 0 ? (
+            <p className="py-6 text-sm font-semibold text-slate-500">No brands available yet. Check back soon.</p>
+          ) : (
+            brands.map((brand) => {
+              const logoSrc = brand.logoUrl || brand.logo || ''
+              const key = brand.id || brand.slug || brand.name
+              return (
+                <Link
+                  key={key}
+                  to={getHref(brand)}
+                  className="group flex min-w-[96px] shrink-0 flex-col items-center text-center"
+                >
+                  <div className="flex h-[92px] w-[92px] items-center justify-center rounded-full bg-[#f6f3ec] transition group-hover:-translate-y-0.5">
+                    {logoSrc ? (
+                      <img
+                        src={logoSrc}
+                        alt=""
+                        loading="lazy"
+                        className="h-[52px] w-[52px] object-contain"
+                      />
+                    ) : (
+                      <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-slate-100 text-xs font-black uppercase text-slate-500">
+                        {(brand.name || '?').slice(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-base font-bold text-slate-600 group-hover:text-slate-900">{brand.name}</p>
+                </Link>
+              )
+            })
+          )}
         </div>
         <button
           type="button"
