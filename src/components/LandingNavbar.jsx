@@ -303,18 +303,18 @@ export function LandingNavbar() {
   }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, gadgetsDropdownOpen, mobileMenuOpen, mobileMoreOpen, profileMenuOpen])
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white">
-      <div className="flex h-[78px] w-full items-center gap-4 px-5 sm:px-6 lg:px-8 xl:px-10">
-        <div className="flex shrink-0 items-center">
+    <header className="sticky top-0 z-[100] w-full max-w-[100vw] overflow-x-hidden border-b border-slate-200 bg-white">
+      <div className="flex h-14 w-full max-w-full items-center gap-2 px-3 sm:h-[78px] sm:gap-4 sm:px-6 lg:px-8 xl:px-10">
+        <div className="flex min-w-0 shrink items-center">
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2 group transition-transform hover:scale-105 active:scale-95"
+            className="flex min-w-0 items-center group transition-transform hover:scale-[1.02] active:scale-[0.98]"
             aria-label="BASkaro home"
           >
             <img
               src="/logo.png"
               alt="BAS karo"
-              className="h-12 w-auto min-w-[128px] object-contain object-left transition-all"
+              className="h-9 w-auto max-w-[108px] object-contain object-left sm:h-12 sm:max-w-[150px] md:h-14 md:max-w-[190px] lg:h-16"
             />
           </Link>
         </div>
@@ -330,11 +330,11 @@ export function LandingNavbar() {
           </div>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:gap-3">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-1 sm:gap-2.5 lg:gap-3">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
             aria-label="Toggle search"
           >
             <Search size={19} />
@@ -349,7 +349,7 @@ export function LandingNavbar() {
 
           <Link
             to="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/65 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/65 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
             aria-label="Open cart"
           >
             <ShoppingCart size={18} />
@@ -362,7 +362,7 @@ export function LandingNavbar() {
 
           <Link
             to="/wishlist"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
             aria-label="Open wishlist"
           >
             <Heart size={18} />
@@ -430,15 +430,17 @@ export function LandingNavbar() {
           ) : (
             <Link
               to="/login"
-              className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-rose-600 hover:shadow-rose-600/20 active:scale-95"
+              aria-label="Log in or sign up"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-slate-900 text-white transition hover:border-rose-300 hover:bg-rose-600 sm:inline-flex sm:h-11 sm:w-auto sm:gap-1.5 sm:px-5 sm:text-sm sm:font-black sm:shadow-lg sm:shadow-slate-900/10"
             >
-              Login/sign up
+              <LogIn size={18} strokeWidth={2.25} className="sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">Login / Sign up</span>
             </Link>
           )}
 
           <button
             type="button"
-            className="md:hidden rounded-xl bg-slate-100 p-2 text-slate-900 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 transition-colors hover:bg-rose-50 hover:text-rose-600 md:hidden"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
           >
@@ -861,7 +863,7 @@ export function LandingNavbar() {
           >
             <div className="flex items-center justify-between border-b px-4 py-4 sm:px-6">
               <Link to="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                <img src="/logo.png" alt="BAS karo" className="h-8 w-auto object-contain" />
+                <img src="/logo.png" alt="BAS karo" className="h-11 w-auto max-w-[180px] object-contain object-left" />
               </Link>
               <button
                 type="button"

@@ -3,12 +3,12 @@
 /* Theme: red (primary), blue (secondary), white/light neutrals — BAS karo */
 @layer base {
   body {
-    @apply m-0 overflow-x-hidden bg-white text-slate-900 antialiased;
+    @apply m-0 overflow-x-hidden bg-white text-slate-900 antialiased text-base leading-relaxed;
     font-family: 'Outfit', sans-serif;
   }
 
   #root {
-    @apply min-h-screen;
+    @apply min-h-screen w-full max-w-[100vw] overflow-x-hidden;
   }
 }
 

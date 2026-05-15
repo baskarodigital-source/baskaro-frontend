@@ -92,7 +92,7 @@ function DashboardShell({ user, navigate }) {
       <aside className="hidden min-h-0 w-64 shrink-0 border-r border-slate-200 bg-white shadow-sm md:flex md:h-full md:flex-col md:overflow-hidden">
         <div className="flex h-16 shrink-0 items-center border-b border-slate-100 px-6">
           <Link to="/">
-            <img src="/logo.png" alt="BAS karo" className="h-8 w-auto object-contain"
+            <img src="/logo.png" alt="BAS karo" className="h-11 w-auto max-w-[180px] object-contain object-left"
               onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block' }} />
             <span style={{display:'none'}} className="text-xl font-black text-slate-900">BAS<span className="text-red-600">karo</span></span>
           </Link>

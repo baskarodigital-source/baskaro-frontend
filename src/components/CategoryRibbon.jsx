@@ -163,7 +163,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
       : 'relative w-full border-b border-red-900/40 bg-gradient-to-r from-black via-zinc-950 to-red-900 py-2.5 sm:py-3.5'
 
   return (
-    <section className={outer} aria-label="Shop by category">
+    <section className={`${outer} min-w-0 overflow-x-hidden`} aria-label="Shop by category">
       {error && (
         <span className="sr-only">
           Category list could not be loaded from the server. Showing default categories.
@@ -191,7 +191,7 @@ export function CategoryRibbon({ variant = 'bar' }) {
 
           <div
             ref={scrollRef}
-            className="flex items-center gap-5 overflow-x-auto pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-8 md:justify-center lg:gap-12"
+            className="flex min-w-0 max-w-full items-center gap-5 overflow-x-auto pb-1 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-8 md:justify-center lg:gap-12"
           >
             {loading
               ? displayList.map((_, i) => (
