@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ServicePageLayout } from '../components/ServicePageLayout'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
+import { getServicePageContent } from '../lib/api/baskaroApi.js'
 
 const BRANDS_FALLBACK = ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Vivo', 'OPPO', 'Realme', 'Motorola']
 
@@ -22,7 +23,7 @@ const HOW_IT_WORKS = [
   },
 ]
 
-const WHY_US = [
+const WHY_US_FALLBACK = [
   'Trained technicians',
   'Genuine parts option',
   'Warranty on repair',
@@ -46,10 +47,46 @@ const FAQS = [
 
 export default function RepairPhonePage() {
   const { brands: apiBrands, loading: brandsLoading } = useCatalogBrands()
+  const [whyUsApi, setWhyUsApi] = useState(null)
+
   const brands = useMemo(() => {
     if (brandsLoading) return []
     return apiBrands.length ? apiBrands : BRANDS_FALLBACK
   }, [brandsLoading, apiBrands])
+
+  const topBrandsForStrip = useMemo(() => {
+    if (brandsLoading) return []
+    if (apiBrands.length) return apiBrands
+    return BRANDS_FALLBACK.map((name) => ({ name, logo: '', logoUrl: '', slug: '', id: name }))
+  }, [brandsLoading, apiBrands])
+
+  useEffect(() => {
+    let cancelled = false
+    getServicePageContent('repair-phone')
+      .then((data) => {
+        if (cancelled) return
+        const raw = data?.whyUsItems ?? data?.whyUs ?? []
+        const list = Array.isArray(raw) ? raw : []
+        const mapped = list
+          .map((row) => ({
+            title: String(row.title || '').trim(),
+            description: String(row.description || '').trim(),
+            sortOrder: Number(row.sortOrder) || 0,
+          }))
+          .filter((r) => r.title && r.description)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+        setWhyUsApi(mapped)
+      })
+      .catch(() => {
+        if (!cancelled) setWhyUsApi([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const whyUsLoading = whyUsApi === null
+  const whyUs = whyUsLoading ? [] : whyUsApi.length > 0 ? whyUsApi : WHY_US_FALLBACK
 
   return (
     <ServicePageLayout
@@ -63,10 +100,12 @@ export default function RepairPhonePage() {
       brandsLoading={brandsLoading}
       howItWorksTitle="How repair works"
       howItWorks={HOW_IT_WORKS}
-      whyUs={WHY_US}
+      whyUs={whyUs}
+      whyUsLoading={whyUsLoading}
       showHotDeals={false}
       hotDealsTitle="Repair offers"
-      topBrands={null}
+      topBrands={topBrandsForStrip}
+      topBrandsLoading={brandsLoading}
       stories={STORIES}
       faqs={FAQS}
       downloadBannerSubtitle="Book repair | Sell old phone | Shop accessories"

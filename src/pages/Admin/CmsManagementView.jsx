@@ -1,34 +1,154 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { 
   UploadCloud, Trash2, Image as ImageIcon, Plus 
 } from 'lucide-react'
+import {
+  deleteBanner,
+  getBanners,
+  patchBannerToggleStatus,
+  postBanner,
+} from '../../lib/api/baskaroApi.js'
+
+const POSITION_OPTIONS = [
+  { label: 'Homepage', value: 'HOME_HERO' },
+  { label: 'promoBanners', value: 'HOME_TOP' },
+]
+
+const POSITION_LABEL_BY_VALUE = Object.fromEntries(POSITION_OPTIONS.map((p) => [p.value, p.label]))
+
+function resolveBannerImageUrl(raw) {
+  const t = String(raw ?? '').trim()
+  if (!t) return ''
+  if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return t
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+  if (t.startsWith('/')) return base ? `${base}${t}` : t
+  return base ? `${base}/${t.replace(/^\//, '')}` : t
+}
+
+function toUiBanner(b) {
+  const id = b?._id != null ? String(b._id) : String(b?.id ?? '')
+  const title = String(b?.title ?? '').trim()
+  const position = String(b?.position ?? 'HOME_HERO').trim() || 'HOME_HERO'
+  const imgUrl = resolveBannerImageUrl(b?.imageUrl ?? b?.imgUrl ?? '')
+  return {
+    id,
+    title,
+    position,
+    imgUrl,
+    isActive: Boolean(b?.isActive),
+  }
+}
 
 export default function CmsManagementView() {
-  const [banners, setBanners] = useState([
-    { id: 'BNR-1', title: 'Diwali Mega Sale Top Header', position: 'Homepage', imgUrl: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop', isActive: true },
-    { id: 'BNR-2', title: '5G Upgrade Promo', position: 'App Banner', imgUrl: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=2070&auto=format&fit=crop', isActive: true },
-    { id: 'BNR-3', title: 'Credit Card Flat 10% Off', position: 'Promotional Offers', imgUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2070&auto=format&fit=crop', isActive: false },
-  ]);
-
-  const positions = ['Homepage', 'App Banner', 'Promotional Offers'];
+  const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
+  const [banners, setBanners] = useState([])
   
   const [isUploading, setIsUploading] = useState(false);
-  const [newBanner, setNewBanner] = useState({ title: '', position: 'Homepage', imgUrl: 'https://images.unsplash.com/photo-1616077168079-7e09a6a715f4?q=80&w=2070&auto=format&fit=crop' });
+  const [newBanner, setNewBanner] = useState({ title: '', position: 'HOME_HERO', imgUrl: '' });
+  const [uploadError, setUploadError] = useState('');
+  const [isBusy, setIsBusy] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const handleToggleStatus = (id) => {
-    setBanners(banners.map(b => b.id === id ? { ...b, isActive: !b.isActive } : b));
+  useEffect(() => {
+    let cancelled = false
+    setIsBusy(true)
+    getBanners({ active: 'all' })
+      .then((list) => {
+        if (cancelled) return
+        const arr = Array.isArray(list) ? list : []
+        setBanners(arr.map(toUiBanner).filter((b) => b.id && b.title && b.imgUrl))
+      })
+      .catch((err) => {
+        if (cancelled) return
+        alert(err?.message || 'Failed to load banners')
+      })
+      .finally(() => {
+        if (!cancelled) setIsBusy(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleToggleStatus = async (id) => {
+    const current = banners.find((b) => b.id === id)
+    if (!current) return
+    try {
+      const updated = await patchBannerToggleStatus(id, { isActive: !current.isActive })
+      const next = toUiBanner(updated)
+      setBanners((prev) => prev.map((b) => (b.id === id ? { ...b, isActive: next.isActive } : b)))
+    } catch (err) {
+      alert(err?.message || 'Failed to update banner status')
+    }
   };
 
-  const handleDelete = (id) => {
-    setBanners(banners.filter(b => b.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await deleteBanner(id)
+      setBanners((prev) => prev.filter((b) => b.id !== id))
+    } catch (err) {
+      alert(err?.message || 'Failed to delete banner')
+    }
   };
 
-  const handleUpload = (e) => {
+  const handleUpload = async (e) => {
     e.preventDefault();
-    const id = `BNR-${Math.floor(10 + Math.random() * 90)}`;
-    setBanners([{ id, ...newBanner, isActive: true }, ...banners]);
-    setIsUploading(false);
-    setNewBanner({ title: '', position: 'Homepage', imgUrl: 'https://images.unsplash.com/photo-1616077168079-7e09a6a715f4?q=80&w=2070&auto=format&fit=crop' });
+    if (!newBanner.imgUrl) {
+      alert('Please upload an image first.');
+      return;
+    }
+    try {
+      const created = await postBanner({
+        title: newBanner.title.trim(),
+        imageUrl: newBanner.imgUrl,
+        position: newBanner.position,
+        isActive: true,
+      })
+      const next = toUiBanner(created)
+      setBanners((prev) => [next, ...prev])
+      setIsUploading(false);
+      setUploadError('');
+      setNewBanner({ title: '', position: 'HOME_HERO', imgUrl: '' });
+    } catch (err) {
+      alert(err?.message || 'Failed to create banner')
+    }
+  };
+
+  const handleImageFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please choose a valid image file.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setUploadError('Image must be 2MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewBanner((prev) => ({ ...prev, imgUrl: String(reader.result || '') }));
+      setUploadError('');
+    };
+    reader.onerror = () => {
+      setUploadError('Could not read the image file. Try another image.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files?.[0];
+    handleImageFile(file);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    handleImageFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
   };
 
   return (
@@ -46,12 +166,17 @@ export default function CmsManagementView() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+         {isBusy ? (
+           <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500">
+             Loading banners...
+           </div>
+         ) : null}
          {banners.map(banner => (
             <div key={banner.id} className={`bg-white border rounded-3xl overflow-hidden shadow-sm transition-all group ${banner.isActive ? 'border-slate-200 hover:shadow-lg' : 'border-slate-100 opacity-60 grayscale-[30%] hover:grayscale-0'}`}>
                <div className="h-40 w-full overflow-hidden relative bg-slate-100">
                   <img src={banner.imgUrl} alt={banner.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute top-3 left-3 flex gap-2">
-                     <span className="bg-white/90 backdrop-blur text-slate-800 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">{banner.position}</span>
+                     <span className="bg-white/90 backdrop-blur text-slate-800 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">{POSITION_LABEL_BY_VALUE[banner.position] || banner.position}</span>
                   </div>
                   <div className="absolute top-3 right-3 flex gap-2">
                      <div className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur shadow-sm flex items-center gap-1.5 ${banner.isActive ? 'bg-emerald-500/90 text-white' : 'bg-slate-800/80 text-white'}`}>
@@ -85,11 +210,41 @@ export default function CmsManagementView() {
             </div>
             <form onSubmit={handleUpload} className="p-6 space-y-4">
                
-               {/* Visual Image Uploader Mock */}
-               <div className="w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-400 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-colors cursor-pointer group">
-                  <UploadCloud size={24} className="mb-2 group-hover:text-blue-500 transition-colors" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Drag & Drop Image</span>
-                  <span className="text-[10px] font-medium text-slate-400 mt-1">1920x1080px (Max 2MB)</span>
+               <div>
+                 <input
+                   ref={fileInputRef}
+                   type="file"
+                   accept="image/*"
+                   className="hidden"
+                   onChange={handleFileInputChange}
+                 />
+                 <div
+                   role="button"
+                   tabIndex={0}
+                   onClick={() => fileInputRef.current?.click()}
+                   onDrop={handleDrop}
+                   onDragOver={handleDragOver}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
+                   }}
+                   className="w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-400 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-colors cursor-pointer group"
+                 >
+                    <UploadCloud size={24} className="mb-2 group-hover:text-blue-500 transition-colors" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Drag & Drop Image</span>
+                    <span className="text-[10px] font-medium text-slate-400 mt-1">1920x1080px (Max 2MB)</span>
+                 </div>
+                 {uploadError ? (
+                   <p className="mt-2 text-xs font-semibold text-red-500">{uploadError}</p>
+                 ) : null}
+                 {newBanner.imgUrl ? (
+                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
+                     <img
+                       src={newBanner.imgUrl}
+                       alt="Banner preview"
+                       className="mx-auto max-h-40 w-auto max-w-full object-contain"
+                     />
+                   </div>
+                 ) : null}
                </div>
 
                <div>
@@ -100,7 +255,7 @@ export default function CmsManagementView() {
                <div>
                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Display Target</label>
                  <select required value={newBanner.position} onChange={e=>setNewBanner({...newBanner, position: e.target.value})} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-black text-slate-700 bg-white cursor-pointer transition-all">
-                    {positions.map(p => <option key={p} value={p}>{p}</option>)}
+                    {POSITION_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                  </select>
                </div>
                <div className="pt-4 flex justify-end gap-3 mt-2">

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { getCatalogPhoneBrands } from '../lib/api/baskaroApi'
+import { getCatalogPhoneBrands, resolveHomeServiceImageUrl } from '../lib/api/baskaroApi'
 
 /**
- * Phone brands from `GET /api/catalog/phone-brands` (filters out accessories-only brands).
+ * Phone brands from `GET /api/catalog/phone-brands` (brands that have at least one active model).
  */
 export function useCatalogBrands() {
   const [brands, setBrands] = useState([])
@@ -19,7 +19,8 @@ export function useCatalogBrands() {
         const mapped = Array.isArray(list)
           ? list
               .map((b) => {
-                const imageUrl = b.imageUrl || ''
+                const raw = String(b.imageUrl || b.image || '').trim()
+                const imageUrl = resolveHomeServiceImageUrl(raw) || raw
                 return {
                   name: b.name || '',
                   slug: b.slug || '',

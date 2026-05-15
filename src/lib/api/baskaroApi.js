@@ -496,6 +496,26 @@ export async function patchFlashDealSection(body) {
 }
 
 // --- Homepage services (public list + admin CRUD) ---
+/** Resolves admin-uploaded relative paths against `VITE_API_URL` (same pattern as catalog images). */
+export function resolveHomeServiceImageUrl(raw) {
+  const t = String(raw ?? '').trim()
+  if (!t) return ''
+  if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return t
+  if (t.startsWith('/')) {
+    const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+    return base ? `${base}${t}` : t
+  }
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+  return base ? `${base}/${t.replace(/^\//, '')}` : t
+}
+
+export async function getFeaturedPreOwned(params = {}) {
+  const q = new URLSearchParams()
+  if (params.limit != null) q.set('limit', String(params.limit))
+  const s = q.toString()
+  return unwrap(await apiRequest(`/api/pre-owned/featured${s ? `?${s}` : ''}`))
+}
+
 export async function getHomeServices() {
   return unwrap(await apiRequest('/api/home-services'))
 }
@@ -515,6 +535,12 @@ export async function patchHomeService(id, body) {
 
 export async function deleteHomeService(id) {
   return unwrap(await apiRequest(`/api/home-services/admin/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+/** Public CMS blocks for service marketing pages (`repair-phone`, etc.). */
+export async function getServicePageContent(pageKey) {
+  const k = encodeURIComponent(String(pageKey || '').trim())
+  return unwrap(await apiRequest(`/api/service-page/${k}`))
 }
 
 // --- Reports ---

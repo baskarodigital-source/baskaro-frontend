@@ -5,7 +5,7 @@ import { gPhoto } from '../constants/googleImages'
 import { DownloadAppBanner } from '../components/DownloadAppBanner'
 import { FlashDealsSection } from '../components/FlashDealsSection'
 import { ProductCard } from '../components/ProductCard'
-import { TopSellingBrands, PHONE_BRAND_PORTALS } from '../components/TopBrandPortals'
+import { TopSellingBrands } from '../components/TopBrandPortals'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
 
 // Import premium PNG assets for that "wow" effect
@@ -21,7 +21,9 @@ import {
   getBanners,
   getCatalogModels,
   getCatalogPhoneBrands,
+  getFeaturedPreOwned,
   getHomeServices,
+  resolveHomeServiceImageUrl,
 } from '../lib/api/baskaroApi.js'
 
 const TOP_NAV = [
@@ -33,13 +35,15 @@ const TOP_NAV = [
   'More',
 ]
 
-const SERVICES = [
-  { label: 'Sell Phone', path: '/sell/phone' },
+/** Offline / API-error fallback — paths match `App.jsx` routes; labels align with `SERVICE_THUMBS`. */
+const SERVICES_FALLBACK = [
+  { label: 'Sell Phone', path: '/sell-phone' },
+  { label: 'Get estimate', path: '/sell-phone' },
   { label: 'Buy Phone', path: '/buy-pre-owned' },
   { label: 'Repair Phone', path: '/repair-phone' },
   { label: 'Find New Phone', path: '/find-new-phone' },
   { label: 'Nearby Stores', path: '/nearby-stores' },
-  { label: 'New Accessories', path: '/buy-accessories' },
+  { label: 'Buy Accessories', path: '/buy-accessories' },
   { label: 'Buy Smartwatches', path: '/buy-accessories' },
 ]
 
@@ -113,6 +117,12 @@ const HERO_CAROUSEL_FALLBACK = [
   },
 ]
 
+const PROMO_BANNERS_FALLBACK = [
+  { id: 'promo-vivo', img: promoVivoBanner, alt: 'vivo T5x 5G', to: '/find-new-phone' },
+  { id: 'promo-oppo', img: promoOppoBanner, alt: 'OPPO A6 Pro 5G', to: '/find-new-phone' },
+  { id: 'promo-redmi', img: promoRedmiBanner, alt: 'REDMI Note 15 5G', to: '/find-new-phone' },
+]
+
 function resolveHeroImageUrl(url) {
   if (!url || typeof url !== 'string') return ''
   const t = url.trim()
@@ -130,8 +140,11 @@ function sanitizeHeroBgClass(raw) {
 
 function mapHeroBannersFromApi(list) {
   if (!Array.isArray(list)) return []
+  const heroPositions = new Set(['HOME_HERO', 'HOMEPAGE', 'Homepage'])
   return list
     .map((b) => {
+      const position = b?.position != null ? String(b.position).trim() : ''
+      if (position && !heroPositions.has(position)) return null
       const id = b._id != null ? String(b._id) : b.id
       const img = resolveHeroImageUrl(b.imageUrl)
       const heading = b.title != null ? String(b.title).trim() : ''
@@ -149,6 +162,32 @@ function mapHeroBannersFromApi(list) {
       }
     })
     .filter(Boolean)
+}
+
+function mapPromoBannersFromApi(list) {
+  if (!Array.isArray(list)) return []
+  const promoPositions = new Set(['HOME_TOP', 'HOME_MIDDLE', 'HOME_BOTTOM'])
+  const order = { HOME_TOP: 0, HOME_MIDDLE: 1, HOME_BOTTOM: 2 }
+
+  return list
+    .map((b) => {
+      const position = b?.position != null ? String(b.position).trim() : ''
+      if (position && !promoPositions.has(position)) return null
+      const id = b?._id != null ? String(b._id) : String(b?.id || '')
+      const img = resolveHeroImageUrl(b?.imageUrl)
+      if (!id || !img) return null
+      const alt = String(b?.title || b?.subtitle || 'Promotional banner').trim()
+      const to = String(b?.redirectUrl || '/find-new-phone').trim() || '/find-new-phone'
+      return {
+        id,
+        img,
+        alt,
+        to,
+        _sort: order[position] ?? 99,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a._sort - b._sort)
 }
 
 const TRUST_TESTIMONIALS = [
@@ -291,7 +330,7 @@ const PRE_OWNED_TOP_BRANDS = [
   'All Brands',
 ]
 
-const MORE_CATEGORIES = [
+const POPULAR_CATEGORIES_FALLBACK = [
   { title: 'Sell Phone', img: gPhoto(0), path: '/sell/phone' },
   { title: 'Sell Tablet', img: gPhoto(1), path: '/sell/tablet' },
   { title: 'Sell Smartwatch', img: gPhoto(2), path: '/sell/smartwatch' },
@@ -458,6 +497,22 @@ const SERVICE_THUMBS = {
   'Nearby Stores': NEARBY_STORE_IMAGE_URL,
   'New Accessories': NEW_ACCESSORIES_IMAGE_URL,
   'Buy Smartwatches': BUY_SMARTWATCHES_IMAGE_URL,
+}
+
+function serviceThumbForLabel(label) {
+  if (!label) return SERVICE_THUMBS['Sell Phone']
+  if (SERVICE_THUMBS[label]) return SERVICE_THUMBS[label]
+  const hit = Object.keys(SERVICE_THUMBS).find((k) => k.toLowerCase() === String(label).trim().toLowerCase())
+  return hit ? SERVICE_THUMBS[hit] : SERVICE_THUMBS['Sell Phone']
+}
+
+function buildFallbackHomeServiceRows() {
+  return SERVICES_FALLBACK.map((s, i) => ({
+    id: `fallback-${i}`,
+    label: s.label,
+    path: s.path,
+    imageUrl: serviceThumbForLabel(s.label),
+  }))
 }
 
 // ─── New Branded Phones (fallback cards) ─────────────────────────────────────
@@ -769,6 +824,36 @@ function BrandedPhonesSection() {
   )
 }
 
+function formatInrPlain(n) {
+  const v = Number(n)
+  if (!Number.isFinite(v) || v < 0) return '—'
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(v)
+  } catch {
+    return `₹${v}`
+  }
+}
+
+function mapFeaturedPreOwnedFromApi(row) {
+  const img = resolveHomeServiceImageUrl(row.imageUrl) || row.imageUrl || ''
+  return {
+    id: row.id,
+    image: img,
+    title: row.title || 'Pre-Owned Device',
+    price: formatInrPlain(row.priceInr),
+    originalPrice: row.originalPriceInr != null ? formatInrPlain(row.originalPriceInr) : undefined,
+    discount: row.discountPercent != null && row.discountPercent > 0 ? row.discountPercent : undefined,
+    rating: row.rating != null && row.rating !== '' ? row.rating : undefined,
+    tag: Array.isArray(row.tags) ? row.tags : [],
+    brand: 'BASKARO',
+    viewPath: row.viewPath || '',
+  }
+}
+
 const PRE_OWNED_DEVICES_CAROUSEL = [
   {
     id: 'samsung-s25-edge',
@@ -825,7 +910,7 @@ const PRE_OWNED_DEVICES_CAROUSEL = [
   },
 ]
 
-function CarouselSection({ title, viewAllText, products }) {
+function CarouselSection({ title, viewAllText, products, loading = false, viewAllHref = '' }) {
   const scrollerRef = useRef(null)
 
   const scrollCarousel = (direction) => {
@@ -835,6 +920,9 @@ function CarouselSection({ title, viewAllText, products }) {
     el.scrollBy({ left: delta, behavior: 'smooth' })
   }
 
+  const viewAllClass =
+    'inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2 text-sm font-black text-white transition hover:bg-red-700'
+
   return (
     <section className="w-full border-y border-red-950/40 bg-gradient-to-b from-[#6f0006] via-[#230001] to-black py-9">
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
@@ -842,13 +930,17 @@ function CarouselSection({ title, viewAllText, products }) {
           <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
             {title} <span className="text-red-500">.</span>
           </h2>
-          <a
-            href="#"
-            className="inline-flex items-center gap-2 rounded-full bg-red-600 px-6 py-2 text-sm font-black text-white transition hover:bg-red-700"
-          >
-            {viewAllText}
-            <ChevronRight className="h-4 w-4" aria-hidden />
-          </a>
+          {viewAllHref ? (
+            <Link to={viewAllHref} className={viewAllClass}>
+              {viewAllText}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          ) : (
+            <a href="#" className={viewAllClass}>
+              {viewAllText}
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </a>
+          )}
         </div>
 
         <div className="relative">
@@ -873,13 +965,23 @@ function CarouselSection({ title, viewAllText, products }) {
             ref={scrollerRef}
             className="flex gap-4 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:px-12"
           >
-            {products.map((p) => (
-              <ProductCard
-                key={p.title}
-                {...p}
-                className="rounded-[28px] border-slate-200 bg-[#f9fafb] shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
-              />
-            ))}
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={`car-skel-${i}`}
+                  className="h-[380px] w-[260px] shrink-0 animate-pulse rounded-[28px] bg-white/20"
+                  aria-hidden
+                />
+              ))
+            ) : (
+              products.map((p) => (
+                <ProductCard
+                  key={p.id || p.title}
+                  {...p}
+                  className="rounded-[28px] border-slate-200 bg-[#f9fafb] shadow-[0_10px_24px_rgba(0,0,0,0.22)]"
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -1133,19 +1235,17 @@ function formatINR(value) {
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const [services, setServices] = useState(
-    SERVICES.map((s) => ({ ...s, imageUrl: SERVICE_THUMBS[s.label] ?? SERVICE_THUMBS['Sell Phone'] })),
-  )
+  const [services, setServices] = useState([])
+  const [servicesLoading, setServicesLoading] = useState(true)
+  const [featuredPreOwned, setFeaturedPreOwned] = useState([])
+  const [featuredPreOwnedLoading, setFeaturedPreOwnedLoading] = useState(true)
   const { brands: catalogBrands, loading: catalogBrandsLoading } = useCatalogBrands()
-  const topSellingBrands = useMemo(() => {
-    if (!catalogBrandsLoading && catalogBrands.length > 0) return catalogBrands
-    return PHONE_BRAND_PORTALS
-  }, [catalogBrandsLoading, catalogBrands])
 
   const [moreOpen, setMoreOpen] = useState(false)
   const [navDropdownOpen, setNavDropdownOpen] = useState(null)
 
   const [heroSlides, setHeroSlides] = useState(HERO_CAROUSEL_FALLBACK)
+  const [promoBanners, setPromoBanners] = useState(PROMO_BANNERS_FALLBACK)
   const [heroSlide, setHeroSlide] = useState(0)
   const heroSlideCount = heroSlides.length
   const servicesRailRef = useRef(null)
@@ -1158,6 +1258,31 @@ export default function LandingPage() {
     if (!el) return
     el.scrollBy({ left: direction === 'left' ? -320 : 320, behavior: 'smooth' })
   }
+
+  const sellDeviceRailCards = useMemo(() => {
+    if (servicesLoading) return []
+    return [...services.map((s) => ({ kind: 'link', id: s.id, title: s.label, img: s.imageUrl, path: s.path })), { kind: 'more', id: 'more', title: 'More' }]
+  }, [services, servicesLoading])
+
+  const popularCategories = useMemo(() => {
+    if (Array.isArray(services) && services.length > 0) {
+      return services
+        .filter((s) => s?.label && s?.path)
+        .map((s) => ({
+          id: String(s.id || s.label),
+          title: String(s.label),
+          img: s.imageUrl || serviceThumbForLabel(s.label),
+          path: String(s.path),
+        }))
+    }
+    return POPULAR_CATEGORIES_FALLBACK.map((c) => ({ ...c, id: c.title }))
+  }, [services])
+
+  const buyPreOwnedCarouselProducts = useMemo(() => {
+    if (featuredPreOwnedLoading) return []
+    if (featuredPreOwned.length > 0) return featuredPreOwned
+    return PRE_OWNED_DEVICES_CAROUSEL
+  }, [featuredPreOwnedLoading, featuredPreOwned])
 
   useEffect(() => {
     if (trustCount <= 1) return
@@ -1177,27 +1302,30 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cancelled = false
+    setServicesLoading(true)
     getHomeServices()
       .then((list) => {
         if (cancelled) return
         const arr = Array.isArray(list) ? list : []
         const mapped = arr
-          .map((s) => ({
-            label: s.label || '',
-            path: s.path || '',
-            imageUrl: s.imageUrl || '',
-          }))
+          .map((s) => {
+            const id = String(s._id ?? s.id ?? '').trim()
+            const label = String(s.label || '').trim()
+            const path = String(s.path || '').trim()
+            const resolved = resolveHomeServiceImageUrl(s.imageUrl)
+            const imageUrl = resolved || serviceThumbForLabel(label)
+            return { id: id || `svc-${label}`, label, path, imageUrl }
+          })
           .filter((s) => s.label && s.path)
-        if (mapped.length) {
-          setServices(
-            mapped.map((s) => ({
-              ...s,
-              imageUrl: s.imageUrl || SERVICE_THUMBS[s.label] || SERVICE_THUMBS['Sell Phone'],
-            })),
-          )
-        }
+        if (mapped.length) setServices(mapped)
+        else setServices(buildFallbackHomeServiceRows())
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setServices(buildFallbackHomeServiceRows())
+      })
+      .finally(() => {
+        if (!cancelled) setServicesLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -1205,16 +1333,41 @@ export default function LandingPage() {
 
   useEffect(() => {
     let cancelled = false
-    getBanners({ position: 'HOME_HERO' })
+    setFeaturedPreOwnedLoading(true)
+    getFeaturedPreOwned({ limit: 12 })
       .then((list) => {
         if (cancelled) return
-        const mapped = mapHeroBannersFromApi(Array.isArray(list) ? list : [])
-        if (mapped.length) {
-          setHeroSlides(mapped)
+        const arr = Array.isArray(list) ? list : []
+        setFeaturedPreOwned(arr.map(mapFeaturedPreOwnedFromApi).filter((p) => p.title && p.price && p.price !== '—'))
+      })
+      .catch(() => {
+        if (!cancelled) setFeaturedPreOwned([])
+      })
+      .finally(() => {
+        if (!cancelled) setFeaturedPreOwnedLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    getBanners({ active: true })
+      .then((list) => {
+        if (cancelled) return
+        const arr = Array.isArray(list) ? list : []
+        const mappedHero = mapHeroBannersFromApi(arr)
+        if (mappedHero.length) {
+          setHeroSlides(mappedHero)
           setHeroSlide(0)
         }
+        const mappedPromo = mapPromoBannersFromApi(arr)
+        setPromoBanners(mappedPromo.length ? mappedPromo : PROMO_BANNERS_FALLBACK)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setPromoBanners(PROMO_BANNERS_FALLBACK)
+      })
     return () => {
       cancelled = true
     }
@@ -1444,25 +1597,38 @@ export default function LandingPage() {
             className="overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             <div className="flex min-w-max gap-4 sm:gap-5">
-              {services.map((service) => (
-                <Link
-                  key={service.label}
-                  to={service.path}
-                  className="group flex w-[180px] shrink-0 flex-col items-center sm:w-[190px]"
-                >
-                  <div className="flex h-[178px] w-full items-center justify-center rounded-[30px] bg-[#f7dfe4] px-4 transition-transform duration-200 group-hover:-translate-y-0.5">
-                    <img
-                      src={service.imageUrl}
-                      alt={service.label}
-                      className="h-[112px] w-[148px] object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                  <span className="mt-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-600 sm:text-sm">
-                    {service.label}
-                  </span>
-                </Link>
-              ))}
+              {servicesLoading
+                ? Array.from({ length: 7 }).map((_, i) => (
+                    <div
+                      key={`svc-skel-${i}`}
+                      className="flex w-[180px] shrink-0 flex-col items-center sm:w-[190px]"
+                      aria-hidden
+                    >
+                      <div className="flex h-[178px] w-full animate-pulse items-center justify-center rounded-[30px] bg-[#f7dfe4]/80 px-4">
+                        <div className="h-[112px] w-[148px] rounded-xl bg-white/50" />
+                      </div>
+                      <div className="mt-3 h-4 w-28 animate-pulse rounded bg-slate-200" />
+                    </div>
+                  ))
+                : services.map((service) => (
+                    <Link
+                      key={service.id}
+                      to={service.path}
+                      className="group flex w-[180px] shrink-0 flex-col items-center sm:w-[190px]"
+                    >
+                      <div className="flex h-[178px] w-full items-center justify-center rounded-[30px] bg-[#f7dfe4] px-4 transition-transform duration-200 group-hover:-translate-y-0.5">
+                        <img
+                          src={service.imageUrl}
+                          alt={service.label}
+                          className="h-[112px] w-[148px] object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                      <span className="mt-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-600 sm:text-sm">
+                        {service.label}
+                      </span>
+                    </Link>
+                  ))}
             </div>
           </div>
         </div>
@@ -1471,7 +1637,7 @@ export default function LandingPage() {
       {/* Top Selling Brands Section */}
       <section className="w-full py-10 bg-white">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
-          <TopSellingBrands brands={topSellingBrands} />
+          <TopSellingBrands brands={catalogBrands} loading={catalogBrandsLoading} />
         </div>
       </section>
 
@@ -1516,78 +1682,70 @@ export default function LandingPage() {
               className="overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               <div className="flex min-w-max gap-4 sm:gap-5">
-                {[
-                  {
-                    title: 'Sell Phone',
-                    img: SERVICE_THUMBS['Sell Phone'],
-                    path: '/sell/phone',
-                  },
-                  {
-                    title: 'Get estimate',
-                    img: 'https://commons.wikimedia.org/wiki/Special:FilePath/Hand%20holding%20Smartphone.jpg',
-                    path: '/sell/phone',
-                  },
-                  {
-                    title: 'Buy Accessories',
-                    img: SERVICE_THUMBS['Buy Accessories'],
-                    path: '/buy-accessories',
-                  },
-                  {
-                    title: 'Repair Phone',
-                    img: SERVICE_THUMBS['Repair Phone'],
-                    path: '/repair-phone',
-                  },
-                  {
-                    title: 'Find New Phone',
-                    img: SERVICE_THUMBS['Find New Phone'],
-                    path: '/find-new-phone',
-                  },
-                  {
-                    title: 'Nearby Stores',
-                    img: SERVICE_THUMBS['Nearby Stores'],
-                    path: '/nearby-stores',
-                  },
-                  {
-                    title: 'More',
-                    img: '',
-                    dots: true,
-                  },
-                ].map((card, idx) => (
-                  <div key={`${card.title}-${idx}`} className="w-[180px] shrink-0 sm:w-[190px]">
-                    <button
-                      type="button"
-                      className="group flex w-full flex-col items-center justify-start"
-                      onClick={() => {
-                        if (card.dots) setMoreOpen(true)
-                        else if (card.path) navigate(card.path)
-                      }}
-                    >
-                      <div className="relative flex h-[168px] w-full items-center justify-center rounded-[30px] bg-[#f7dfe4] px-4 transition-all duration-200 group-hover:-translate-y-0.5">
-                        {card.dots ? (
-                          <span className="flex items-center gap-1 text-xl text-slate-500">
-                            <span>•</span>
-                            <span>•</span>
-                            <span>•</span>
-                          </span>
-                        ) : (
-                          <div className="flex h-[72px] w-[110px] items-center justify-center rounded-2xl bg-[#e7f1f0]">
-                            <img
-                              src={card.img}
-                              alt={card.title}
-                              className="h-[62px] w-[84px] object-contain"
-                              loading="lazy"
-                            />
+                {servicesLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={`sell-skel-${i}`}
+                        className="w-[180px] shrink-0 sm:w-[190px]"
+                        aria-hidden
+                      >
+                        <div className="flex w-full flex-col items-center">
+                          <div className="flex h-[168px] w-full animate-pulse items-center justify-center rounded-[30px] bg-[#f7dfe4]/80 px-4">
+                            <div className="flex h-[72px] w-[110px] items-center justify-center rounded-2xl bg-[#e7f1f0]/80">
+                              <div className="h-[48px] w-[72px] rounded-lg bg-slate-200/60" />
+                            </div>
                           </div>
-                        )}
-
+                          <div className="mt-3 h-4 w-24 animate-pulse rounded bg-slate-200" />
+                        </div>
                       </div>
-
-                      <span className="mt-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-600 sm:text-sm">
-                        {card.title}
-                      </span>
-                    </button>
-                  </div>
-                ))}
+                    ))
+                  : sellDeviceRailCards.map((card) => (
+                      <div key={card.id} className="w-[180px] shrink-0 sm:w-[190px]">
+                        {card.kind === 'more' ? (
+                          <button
+                            type="button"
+                            className="group flex w-full flex-col items-center justify-start"
+                            onClick={() => setMoreOpen(true)}
+                          >
+                            <div className="relative flex h-[168px] w-full items-center justify-center rounded-[30px] bg-[#f7dfe4] px-4 transition-all duration-200 group-hover:-translate-y-0.5">
+                              <span className="flex items-center gap-1 text-xl text-slate-500">
+                                <span>•</span>
+                                <span>•</span>
+                                <span>•</span>
+                              </span>
+                            </div>
+                            <span className="mt-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-600 sm:text-sm">
+                              {card.title}
+                            </span>
+                          </button>
+                        ) : (
+                          <Link
+                            to={card.path}
+                            className="group flex w-full flex-col items-center justify-start"
+                          >
+                            <div className="relative flex h-[168px] w-full items-center justify-center rounded-[30px] bg-[#f7dfe4] px-4 transition-all duration-200 group-hover:-translate-y-0.5">
+                              <div className="flex h-[72px] w-[110px] items-center justify-center rounded-2xl bg-[#e7f1f0]">
+                                {card.img ? (
+                                  <img
+                                    src={card.img}
+                                    alt={card.title}
+                                    className="h-[62px] w-[84px] object-contain"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span className="text-xs font-black uppercase text-slate-400">
+                                    {(card.title || '?').slice(0, 2)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span className="mt-3 text-center text-xs font-extrabold uppercase tracking-wide text-slate-600 sm:text-sm">
+                              {card.title}
+                            </span>
+                          </Link>
+                        )}
+                      </div>
+                    ))}
               </div>
             </div>
           </div>
@@ -1643,9 +1801,9 @@ export default function LandingPage() {
 
             <div className="h-full overflow-y-auto px-4 py-5">
               <div className="grid grid-cols-2 gap-6">
-                {MORE_CATEGORIES.map((c) => (
+                {popularCategories.map((c) => (
                   <button
-                    key={c.title}
+                    key={c.id}
                     type="button"
                     className="group"
                     onClick={() => {
@@ -1677,7 +1835,9 @@ export default function LandingPage() {
       <CarouselSection
         title="Buy Pre-Owned Devices"
         viewAllText="View All"
-        products={PRE_OWNED_DEVICES_CAROUSEL}
+        viewAllHref="/buy-pre-owned"
+        products={buyPreOwnedCarouselProducts}
+        loading={featuredPreOwnedLoading}
       />
 
       {/* Trust & social proof — full-width band + edge-to-edge partner strip */}
@@ -1858,30 +2018,16 @@ export default function LandingPage() {
       <section className="w-full py-6 sm:py-10">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
           <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoVivoBanner}
-                alt="vivo T5x 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoOppoBanner}
-                alt="OPPO A6 Pro 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoRedmiBanner}
-                alt="REDMI Note 15 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
+            {promoBanners.map((banner) => (
+              <Link key={banner.id} to={banner.to} className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+                <img
+                  src={banner.img}
+                  alt={banner.alt}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -1918,9 +2064,9 @@ export default function LandingPage() {
             className="overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             <div className="flex min-w-max gap-6">
-              {MORE_CATEGORIES.map((c) => (
+              {popularCategories.map((c) => (
                 <button
-                  key={`popular-${c.title}`}
+                  key={`popular-${c.id}`}
                   type="button"
                   onClick={() => c.path && navigate(c.path)}
                   className="group flex w-[120px] shrink-0 flex-col items-center text-center"
@@ -1946,37 +2092,24 @@ export default function LandingPage() {
       <CarouselSection
         title="Trending Electronics"
         viewAllText="View All"
-        products={PRE_OWNED_DEVICES_CAROUSEL}
+        products={buyPreOwnedCarouselProducts}
+        loading={featuredPreOwnedLoading}
       />
 
       {/* Promotional Banners (after Trending Electronics) */}
       <section className="w-full py-6 sm:py-10">
         <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
           <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:pb-0 sm:snap-none">
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoVivoBanner}
-                alt="vivo T5x 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoOppoBanner}
-                alt="OPPO A6 Pro 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
-            <Link to="/find-new-phone" className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
-              <img
-                src={promoRedmiBanner}
-                alt="REDMI Note 15 5G"
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </Link>
+            {promoBanners.map((banner) => (
+              <Link key={`${banner.id}-after-trending`} to={banner.to} className="group relative aspect-[21/9] w-[85%] shrink-0 snap-center overflow-hidden rounded-xl bg-slate-50 transition-all sm:aspect-auto sm:h-[200px] sm:w-full md:h-[240px] lg:h-[280px]">
+                <img
+                  src={banner.img}
+                  alt={banner.alt}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </Link>
+            ))}
           </div>
         </div>
       </section>

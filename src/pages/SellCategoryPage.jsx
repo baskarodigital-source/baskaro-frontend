@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ServicePageLayout } from '../components/ServicePageLayout'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
+import { getServicePageContent } from '../lib/api/baskaroApi'
 import {
   getSellCategoryConfig,
   PHONE_BRAND_FALLBACK,
@@ -16,6 +17,7 @@ export default function SellCategoryPage() {
   const navigate = useNavigate()
   const config = getSellCategoryConfig(category)
   const { brands: apiBrands, loading: brandsLoading } = useCatalogBrands()
+  const [whyUsApi, setWhyUsApi] = useState(null)
 
   const brands = useMemo(() => {
     if (!config) return []
@@ -29,6 +31,36 @@ export default function SellCategoryPage() {
   if (!config) {
     return <Navigate to="/sell/phone" replace />
   }
+
+  useEffect(() => {
+    let cancelled = false
+    const pageKey = `sell-${category}`
+    getServicePageContent(pageKey)
+      .then((data) => {
+        if (cancelled) return
+        const raw = data?.whyUsItems ?? []
+        const mapped = Array.isArray(raw)
+          ? raw
+              .map((r) => ({
+                title: String(r?.title || '').trim(),
+                description: String(r?.description || '').trim(),
+                sortOrder: Number(r?.sortOrder) || 0,
+              }))
+              .filter((r) => r.title && r.description)
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+          : []
+        setWhyUsApi(mapped)
+      })
+      .catch(() => {
+        if (!cancelled) setWhyUsApi([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [category])
+
+  const whyUsLoading = whyUsApi == null
+  const whyUs = whyUsLoading ? [] : whyUsApi.length ? whyUsApi : WHY_US_DEFAULT
 
   const onSellNow = (product) => {
     const itemLabel = product?.name ?? 'Selected device'
@@ -52,10 +84,12 @@ export default function SellCategoryPage() {
       brandPickerSubtitle={config.brandPickerSubtitle ?? 'Or choose a brand'}
       howItWorksTitle="How Baskaro Works"
       howItWorks={HOW_IT_WORKS_DEFAULT}
-      whyUs={WHY_US_DEFAULT}
+      whyUs={whyUs}
+      whyUsLoading={whyUsLoading}
       showHotDeals={config.showHotDeals ?? false}
       hotDealsTitle="Hot Deals"
-      topBrands={null}
+      topBrands={brands}
+      topBrandsLoading={config.useCatalogBrands ? brandsLoading : false}
       showTopSellingPhones={config.showTopSellingPhones ?? false}
       stories={STORIES_DEFAULT}
       faqs={FAQS_DEFAULT}
