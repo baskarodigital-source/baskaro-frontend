@@ -85,12 +85,6 @@ export function DownloadAppBanner({
               className="absolute bottom-2 right-16 hidden h-[190px] w-auto object-contain object-right drop-shadow-2xl sm:right-40 sm:block sm:h-[225px]"
               loading="lazy"
             />
-            <img
-              src="/logo.png"
-              alt="BAS karo"
-              className="absolute bottom-4 left-0 h-20 w-auto max-w-[240px] object-contain object-left brightness-0 invert drop-shadow-md sm:bottom-6 sm:h-24 sm:max-w-[280px]"
-              loading="lazy"
-            />
           </div>
         </div>
       </div>
