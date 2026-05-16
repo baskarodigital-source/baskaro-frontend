@@ -35,7 +35,9 @@ export function MainLayout({ children }) {
   return (
     <div className="w-full max-w-[100vw] overflow-x-hidden">
       <LandingNavbar />
-      <CategoryRibbon variant="bar" />
+      <div className="mt-3 bg-white sm:mt-4">
+        <CategoryRibbon variant="bar" />
+      </div>
       <div className="pb-[120px] sm:pb-0">
         {children}
         <SiteFooter />
