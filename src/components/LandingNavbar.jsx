@@ -341,11 +341,11 @@ export function LandingNavbar() {
           </div>
         </div>
 
-        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-1.5 md:gap-2.5 lg:gap-3">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-0 md:gap-2.5 lg:gap-3">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-slate-600 transition-colors hover:border-rose-300 hover:bg-rose-100/70 hover:text-slate-900 lg:hidden"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-600 transition-colors hover:text-slate-900 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70 lg:hidden"
             aria-label="Toggle search"
           >
             <Search size={18} />
@@ -360,7 +360,7 @@ export function LandingNavbar() {
 
           <Link
             to="/cart"
-            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/65 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-8 w-8 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open cart"
           >
             <ShoppingCart size={18} />
@@ -373,7 +373,7 @@ export function LandingNavbar() {
 
           <Link
             to="/wishlist"
-            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-8 w-8 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open wishlist"
           >
             <Heart size={18} />
@@ -396,7 +396,7 @@ export function LandingNavbar() {
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="rounded-xl border border-rose-200/80 bg-rose-50/70 p-2 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+                className="flex h-8 w-8 items-center justify-center p-0 text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:p-2 md:hover:border-rose-300 md:hover:bg-rose-100/70"
                 aria-label={accountAriaLabel}
                 aria-expanded={profileMenuOpen}
                 aria-haspopup="menu"
@@ -442,7 +442,7 @@ export function LandingNavbar() {
             <Link
               to="/login"
               aria-label="Log in or sign up"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-200/80 bg-slate-900 text-white transition hover:border-rose-300 hover:bg-rose-600 sm:inline-flex sm:h-11 sm:w-auto sm:gap-1.5 sm:px-5 sm:text-sm sm:font-black sm:shadow-lg sm:shadow-slate-900/10"
+              className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-900 transition hover:text-rose-600 sm:inline-flex sm:h-11 sm:w-auto sm:rounded-xl sm:border sm:border-rose-200/80 sm:bg-slate-900 sm:px-5 sm:text-white sm:hover:border-rose-300 sm:hover:bg-rose-600 sm:gap-1.5 sm:text-sm sm:font-black sm:shadow-lg sm:shadow-slate-900/10"
             >
               <LogIn size={18} strokeWidth={2.25} className="sm:hidden" aria-hidden />
               <span className="hidden sm:inline">Login / Sign up</span>
@@ -451,7 +451,7 @@ export function LandingNavbar() {
 
           <button
             type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 transition-colors hover:bg-rose-50 hover:text-rose-600 md:hidden"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-900 transition-colors hover:text-rose-600 md:hidden"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
           >
