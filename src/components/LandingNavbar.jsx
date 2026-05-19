@@ -304,7 +304,7 @@ export function LandingNavbar() {
 
   return (
     <header className="sticky top-0 z-[100] w-full max-w-[100vw] border-b border-slate-200 bg-white">
-      <div className="flex h-14 w-full max-w-full items-center gap-3 overflow-x-hidden px-4 md:h-[78px] md:gap-4 md:px-6 lg:px-8 xl:px-10">
+      <div className="relative z-[110] flex h-14 w-full max-w-full items-center gap-3 overflow-x-hidden pl-2 pr-4 md:h-[78px] md:gap-4 md:px-6 lg:px-8 xl:px-10">
         <Link
           to="/"
           className="flex h-10 shrink-0 items-center md:hidden"
@@ -330,6 +330,8 @@ export function LandingNavbar() {
           </Link>
         </div>
 
+        <div className="max-md:flex-1 md:hidden" aria-hidden="true" />
+
         <div className="relative hidden max-w-[620px] flex-1 lg:block">
           <input
             className="h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50/70 py-3 pl-5 pr-12 text-[15px] font-semibold text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-slate-300 focus:bg-white"
@@ -341,11 +343,11 @@ export function LandingNavbar() {
           </div>
         </div>
 
-        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-0 md:gap-2.5 lg:gap-3">
+        <div className="flex min-w-0 shrink-0 items-center justify-end max-md:-space-x-1 max-md:gap-0 md:ml-auto md:gap-2.5 md:space-x-0 lg:gap-3">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-600 transition-colors hover:text-slate-900 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70 lg:hidden"
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-600 transition-colors hover:text-slate-900 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70 lg:hidden"
             aria-label="Toggle search"
           >
             <Search size={18} />
@@ -360,7 +362,7 @@ export function LandingNavbar() {
 
           <Link
             to="/cart"
-            className="relative flex h-8 w-8 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70"
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open cart"
           >
             <ShoppingCart size={18} />
@@ -373,7 +375,7 @@ export function LandingNavbar() {
 
           <Link
             to="/wishlist"
-            className="relative flex h-8 w-8 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70"
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open wishlist"
           >
             <Heart size={18} />
@@ -392,7 +394,7 @@ export function LandingNavbar() {
           </button>
 
           {loggedIn ? (
-            <div className="relative" data-topnav-dropdown="true">
+            <div className="relative z-[120] hidden md:block" data-topnav-dropdown="true">
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
@@ -451,7 +453,7 @@ export function LandingNavbar() {
 
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-900 transition-colors hover:text-rose-600 md:hidden"
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-900 transition-colors hover:text-rose-600 md:hidden"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
           >
@@ -486,7 +488,7 @@ export function LandingNavbar() {
         )}
       </AnimatePresence>
 
-      <nav className="relative hidden w-full border-t border-slate-100 bg-white md:block">
+      <nav className="relative z-[50] hidden w-full border-t border-slate-100 bg-white md:block">
         <div className="mx-3 mt-1.5 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:mx-4 lg:mx-6">
           <button
             type="button"
@@ -891,6 +893,20 @@ export function LandingNavbar() {
 
             <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 custom-scrollbar">
               <nav className="flex flex-col gap-2">
+                {loggedIn ? (
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 text-sm font-black text-rose-700 transition-all hover:border-rose-200 hover:bg-rose-100"
+                  >
+                    <span className="flex items-center gap-2">
+                      <UserCircle size={18} strokeWidth={2} aria-hidden />
+                      Profile
+                    </span>
+                    <ChevronRight size={18} className="opacity-50" />
+                  </Link>
+                ) : null}
+
                 <Link
                   to="/"
                   onClick={() => {
