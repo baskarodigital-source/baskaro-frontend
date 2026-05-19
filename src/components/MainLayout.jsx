@@ -25,7 +25,9 @@ export function MainLayout({ children }) {
   if (slimLayout) {
     return (
       <div className="flex h-dvh max-h-dvh flex-col overflow-hidden">
-        <LandingNavbar />
+        <div className="relative z-[100] shrink-0 overflow-visible">
+          <LandingNavbar />
+        </div>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         <WhatsAppWidget />
       </div>

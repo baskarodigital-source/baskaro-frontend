@@ -303,8 +303,8 @@ export function LandingNavbar() {
   }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, gadgetsDropdownOpen, mobileMenuOpen, mobileMoreOpen, profileMenuOpen])
 
   return (
-    <header className="sticky top-0 z-[100] w-full max-w-[100vw] border-b border-slate-200 bg-white">
-      <div className="relative z-[110] flex h-14 w-full max-w-full items-center gap-3 overflow-x-hidden pl-2 pr-4 md:h-[78px] md:gap-4 md:px-6 lg:px-8 xl:px-10">
+    <header className="sticky top-0 z-[100] w-full max-w-[100vw] overflow-visible border-b border-slate-200 bg-white">
+      <div className="relative z-[110] flex h-14 w-full max-w-full items-center gap-3 overflow-visible pl-2 pr-4 md:h-[78px] md:gap-4 md:px-6 lg:px-8 xl:px-10">
         <Link
           to="/"
           className="flex h-10 shrink-0 items-center md:hidden"
@@ -394,7 +394,7 @@ export function LandingNavbar() {
           </button>
 
           {loggedIn ? (
-            <div className="relative z-[120] hidden md:block" data-topnav-dropdown="true">
+            <div className="relative z-[130] hidden overflow-visible md:block" data-topnav-dropdown="true">
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
@@ -412,7 +412,7 @@ export function LandingNavbar() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full z-[120] mt-2 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
+                    className="absolute right-0 top-full z-[130] mt-2 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
                   >
                     <Link
                       role="menuitem"
@@ -488,7 +488,7 @@ export function LandingNavbar() {
         )}
       </AnimatePresence>
 
-      <nav className="relative z-[50] hidden w-full border-t border-slate-100 bg-white md:block">
+      <nav className="relative z-[40] hidden w-full border-t border-slate-100 bg-white md:block">
         <div className="mx-3 mt-1.5 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:mx-4 lg:mx-6">
           <button
             type="button"
