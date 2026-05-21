@@ -144,7 +144,7 @@ export default function LoginPage() {
           {/* Logo */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-center sm:mb-6">
             <Link to="/">
-              <img src="/logo.png" alt="BAS karo" className="mx-auto h-10 w-auto object-contain"
+              <img src="/logo.png" alt="BAS karo" className="mx-auto h-14 w-auto max-w-[230px] object-contain"
                 onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
               <span style={{ display: 'none' }} className="text-2xl font-black tracking-tight text-slate-900">
                 BAS<span className="text-red-600">karo</span>

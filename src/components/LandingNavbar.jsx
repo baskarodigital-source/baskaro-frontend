@@ -303,21 +303,34 @@ export function LandingNavbar() {
   }, [moreDropdownOpen, sellDesktopOpen, preOwnedDropdownOpen, gadgetsDropdownOpen, mobileMenuOpen, mobileMoreOpen, profileMenuOpen])
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-slate-200 bg-white">
-      <div className="flex h-[78px] w-full items-center gap-4 px-5 sm:px-6 lg:px-8 xl:px-10">
-        <div className="flex shrink-0 items-center">
+    <header className="sticky top-0 z-[100] w-full max-w-[100vw] overflow-visible border-b border-slate-200 bg-white">
+      <div className="relative z-[110] flex h-14 w-full max-w-full items-center gap-3 overflow-visible pl-2 pr-4 md:h-[78px] md:gap-4 md:px-6 lg:px-8 xl:px-10">
+        <Link
+          to="/"
+          className="flex h-10 shrink-0 items-center md:hidden"
+          aria-label="BASkaro home"
+        >
+          <img
+            src="/logo-nav.png"
+            alt="BAS karo"
+            className="h-10 w-auto max-w-[168px] object-contain object-left"
+          />
+        </Link>
+        <div className="hidden shrink-0 items-center md:flex md:pr-6">
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2 group transition-transform hover:scale-105 active:scale-95"
+            className="flex h-14 items-center transition-transform hover:scale-[1.02] active:scale-[0.98]"
             aria-label="BASkaro home"
           >
             <img
-              src="/logo.png"
+              src="/logo-nav.png"
               alt="BAS karo"
-              className="h-12 w-auto min-w-[128px] object-contain object-left transition-all"
+              className="h-11 w-auto max-w-[240px] object-contain object-left"
             />
           </Link>
         </div>
+
+        <div className="max-md:flex-1 md:hidden" aria-hidden="true" />
 
         <div className="relative hidden max-w-[620px] flex-1 lg:block">
           <input
@@ -330,14 +343,14 @@ export function LandingNavbar() {
           </div>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:gap-3">
+        <div className="flex min-w-0 shrink-0 items-center justify-end max-md:-space-x-1 max-md:gap-0 md:ml-auto md:gap-2.5 md:space-x-0 lg:gap-3">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-600 transition-colors hover:text-slate-900 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70 lg:hidden"
             aria-label="Toggle search"
           >
-            <Search size={19} />
+            <Search size={18} />
           </button>
 
           <div className="hidden items-center gap-2 sm:flex">
@@ -349,7 +362,7 @@ export function LandingNavbar() {
 
           <Link
             to="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/65 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open cart"
           >
             <ShoppingCart size={18} />
@@ -362,7 +375,7 @@ export function LandingNavbar() {
 
           <Link
             to="/wishlist"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70"
             aria-label="Open wishlist"
           >
             <Heart size={18} />
@@ -381,11 +394,11 @@ export function LandingNavbar() {
           </button>
 
           {loggedIn ? (
-            <div className="relative" data-topnav-dropdown="true">
+            <div className="relative z-[130] hidden overflow-visible md:block" data-topnav-dropdown="true">
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="rounded-xl border border-rose-200/80 bg-rose-50/70 p-2 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800"
+                className="flex h-8 w-8 items-center justify-center p-0 text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:p-2 md:hover:border-rose-300 md:hover:bg-rose-100/70"
                 aria-label={accountAriaLabel}
                 aria-expanded={profileMenuOpen}
                 aria-haspopup="menu"
@@ -399,7 +412,7 @@ export function LandingNavbar() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full z-[120] mt-2 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
+                    className="absolute right-0 top-full z-[130] mt-2 w-52 rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl"
                   >
                     <Link
                       role="menuitem"
@@ -430,15 +443,17 @@ export function LandingNavbar() {
           ) : (
             <Link
               to="/login"
-              className="inline-flex h-11 items-center rounded-xl bg-slate-900 px-6 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-rose-600 hover:shadow-rose-600/20 active:scale-95"
+              aria-label="Log in or sign up"
+              className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-900 transition hover:text-rose-600 sm:inline-flex sm:h-11 sm:w-auto sm:rounded-xl sm:border sm:border-rose-200/80 sm:bg-slate-900 sm:px-5 sm:text-white sm:hover:border-rose-300 sm:hover:bg-rose-600 sm:gap-1.5 sm:text-sm sm:font-black sm:shadow-lg sm:shadow-slate-900/10"
             >
-              Login/sign up
+              <LogIn size={18} strokeWidth={2.25} className="sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">Login / Sign up</span>
             </Link>
           )}
 
           <button
             type="button"
-            className="md:hidden rounded-xl bg-slate-100 p-2 text-slate-900 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-900 transition-colors hover:text-rose-600 md:hidden"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
           >
@@ -454,22 +469,26 @@ export function LandingNavbar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute inset-x-0 top-full z-[110] border-b border-slate-100 bg-white p-4 shadow-xl xl:hidden"
+            className="absolute inset-x-0 top-full z-[110] border-b border-slate-100 bg-white px-4 py-3 shadow-xl md:hidden"
           >
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+                aria-hidden
+              />
               <input
                 autoFocus
                 type="search"
                 placeholder="Search phones..."
-                className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3 pl-11 pr-4 text-sm font-bold outline-none focus:border-rose-500 focus:bg-white transition-all"
+                className="box-border w-full rounded-2xl border-2 border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-sm font-bold outline-none transition-all focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-500/20"
               />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <nav className="relative hidden w-full border-t border-slate-100 bg-white md:block">
+      <nav className="relative z-[40] hidden w-full border-t border-slate-100 bg-white md:block">
         <div className="mx-3 mt-1.5 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:mx-4 lg:mx-6">
           <button
             type="button"
@@ -861,7 +880,7 @@ export function LandingNavbar() {
           >
             <div className="flex items-center justify-between border-b px-4 py-4 sm:px-6">
               <Link to="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                <img src="/logo.png" alt="BAS karo" className="h-8 w-auto object-contain" />
+                <img src="/logo-nav.png" alt="BAS karo" className="h-10 w-auto max-w-[168px] object-contain object-left" />
               </Link>
               <button
                 type="button"
@@ -874,6 +893,20 @@ export function LandingNavbar() {
 
             <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 custom-scrollbar">
               <nav className="flex flex-col gap-2">
+                {loggedIn ? (
+                  <Link
+                    to="/profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 text-sm font-black text-rose-700 transition-all hover:border-rose-200 hover:bg-rose-100"
+                  >
+                    <span className="flex items-center gap-2">
+                      <UserCircle size={18} strokeWidth={2} aria-hidden />
+                      Profile
+                    </span>
+                    <ChevronRight size={18} className="opacity-50" />
+                  </Link>
+                ) : null}
+
                 <Link
                   to="/"
                   onClick={() => {

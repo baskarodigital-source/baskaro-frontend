@@ -116,33 +116,35 @@ export function ServicePageLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-white">
-      <section className="w-full border-b border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
-          <p className="text-sm font-semibold text-slate-500">{breadcrumb}</p>
+    <div className="min-h-screen min-w-0 overflow-x-hidden bg-gradient-to-b from-white via-slate-50 to-white">
+      <section className="w-full min-w-0 overflow-x-hidden border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl min-w-0 px-4 py-8 sm:px-6 lg:py-10">
+          <p className="break-words text-sm font-semibold text-slate-500">{breadcrumb}</p>
 
-          <div className="mt-4 grid gap-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.45fr_1fr] lg:items-stretch lg:p-6">
-            <div className="flex h-full flex-col">
-              <h1 className="text-3xl font-extrabold leading-tight text-slate-900 sm:text-5xl">{title}</h1>
+          <div className="mt-4 grid min-w-0 gap-6 overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1.45fr_1fr] lg:items-stretch lg:p-6">
+            <div className="flex h-full min-w-0 flex-col overflow-hidden">
+              <h1 className="text-2xl font-extrabold leading-tight break-words text-balance text-slate-900 sm:text-4xl lg:text-5xl">
+                {title}
+              </h1>
 
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-slate-800 sm:text-[28px]">
+              <div className="mt-5 flex min-w-0 flex-wrap gap-x-4 gap-y-2 text-sm font-bold text-slate-800 sm:gap-x-6 sm:text-lg md:text-xl">
                 {heroPills.map((item) => (
-                  <span key={item} className="inline-flex items-center gap-2">
-                    <span className="text-red-600">✓</span>
-                    <span>{item}</span>
+                  <span key={item} className="inline-flex min-w-0 max-w-full items-center gap-2">
+                    <span className="shrink-0 text-red-600">✓</span>
+                    <span className="break-words">{item}</span>
                   </span>
                 ))}
               </div>
 
               <div className="mt-6">
                 <p className="mb-3 text-xs font-bold text-slate-800 sm:text-sm">{searchLabel}</p>
-                <div className="flex flex-row gap-2 sm:gap-3">
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-3">
                   <input
                     type="search"
                     placeholder={searchPlaceholder}
-                    className="h-11 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-400"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none transition focus:border-slate-400"
                   />
-                  <Button variant="primary" className="h-11 px-5 text-sm">
+                  <Button variant="primary" className="h-11 shrink-0 px-5 text-sm">
                     {searchButtonText}
                   </Button>
                 </div>
@@ -155,7 +157,7 @@ export function ServicePageLayout({
                     <p className="text-sm font-semibold text-slate-700">{brandPickerSubtitle}</p>
                     <span className="h-px flex-1 bg-slate-300/70" />
                   </div>
-                  <div className="mt-5 flex items-start gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="mt-5 flex min-w-0 max-w-full items-start gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {brandsLoading
                       ? Array.from({ length: 5 }).map((_, i) => (
                           <div
@@ -171,7 +173,7 @@ export function ServicePageLayout({
                             <button
                               key={name}
                               type="button"
-                              className="group flex h-16 min-w-[4.5rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 transition hover:border-slate-300 hover:shadow-sm"
+                              className="group flex h-16 min-w-[4.5rem] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 transition hover:border-slate-300 hover:shadow-sm"
                             >
                               {logo ? (
                                 <img src={logo} alt={name} className="h-7 w-10 object-contain mix-blend-multiply" />
@@ -185,7 +187,7 @@ export function ServicePageLayout({
                     {!brandsLoading && brands.length > 4 ? (
                       <button
                         type="button"
-                        className="inline-flex h-16 min-w-fit items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
+                        className="inline-flex h-16 min-w-fit shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300"
                       >
                         More Brands <span aria-hidden>›</span>
                       </button>
@@ -195,7 +197,7 @@ export function ServicePageLayout({
               )}
             </div>
 
-            <div className="h-full">
+            <div className="min-w-0 h-full">
               <div className="relative mx-auto aspect-square h-full max-h-[420px] w-full overflow-hidden rounded-3xl bg-slate-100">
                 {heroImageUrl ? (
                   <img
@@ -251,8 +253,8 @@ export function ServicePageLayout({
       </section>
 
       {showHotDeals && (
-        <section className="w-full bg-slate-100 px-4 pb-10 sm:pb-12">
-          <div className="mx-auto max-w-7xl">
+        <section className="w-full min-w-0 overflow-x-hidden bg-slate-100 px-4 pb-10 sm:pb-12">
+          <div className="mx-auto max-w-7xl min-w-0">
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">{hotDealsTitle}</h2>
               <div className="hidden items-center gap-2 md:flex">
@@ -276,7 +278,7 @@ export function ServicePageLayout({
             </div>
             <div
               ref={hotDealsRef}
-              className="mt-6 flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              className="mt-6 flex min-w-0 max-w-full gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             >
               {[
                 {
@@ -306,7 +308,7 @@ export function ServicePageLayout({
               ].map((deal) => (
                 <article
                   key={deal.title}
-                  className={`flex min-h-[190px] min-w-[360px] items-stretch gap-4 overflow-hidden rounded-2xl bg-gradient-to-r ${deal.bg} p-6 md:min-w-[380px]`}
+                  className={`flex min-h-[190px] w-[min(100%,20rem)] shrink-0 items-stretch gap-4 overflow-hidden rounded-2xl bg-gradient-to-r ${deal.bg} p-6 sm:w-[22rem] md:min-w-[380px]`}
                 >
                   <div className="flex min-w-0 flex-1 flex-col justify-between">
                     <h3 className="text-2xl font-black leading-tight text-slate-900 sm:text-3xl">{deal.title}</h3>

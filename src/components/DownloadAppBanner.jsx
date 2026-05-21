@@ -72,25 +72,19 @@ export function DownloadAppBanner({
             </div>
           </div>
 
-          <div className="relative h-[220px] w-full max-w-[420px] shrink-0 self-end sm:h-[260px]">
+          <div className="relative mx-auto h-[200px] w-full max-w-[320px] shrink-0 overflow-hidden self-end sm:mx-0 sm:h-[260px] sm:max-w-[420px]">
             <img
               src={iphone14Front}
               alt=""
-              className="absolute bottom-0 right-6 h-[220px] w-auto rounded-2xl object-contain drop-shadow-2xl sm:h-[260px] mix-blend-multiply"
+              className="absolute bottom-0 right-0 h-[180px] w-auto max-w-[85%] object-contain object-right drop-shadow-2xl sm:right-6 sm:h-[260px] sm:max-w-none mix-blend-multiply"
               loading="lazy"
             />
             <img
               src="https://commons.wikimedia.org/wiki/Special:FilePath/Smartphone.png"
               alt=""
-              className="absolute bottom-2 right-40 h-[190px] w-auto rounded-2xl object-contain drop-shadow-2xl sm:bottom-3 sm:h-[225px]"
+              className="absolute bottom-2 right-16 hidden h-[190px] w-auto object-contain object-right drop-shadow-2xl sm:right-40 sm:block sm:h-[225px]"
               loading="lazy"
             />
-            <div
-              className="absolute bottom-0 left-3 flex h-[170px] w-[140px] items-center justify-center rounded-2xl bg-white text-3xl font-extrabold tracking-tight text-slate-900 shadow-lg sm:h-[200px] sm:w-[160px] sm:text-4xl"
-              aria-hidden="true"
-            >
-              BAS
-            </div>
           </div>
         </div>
       </div>

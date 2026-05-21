@@ -178,9 +178,9 @@ export function ProductCard({
               else if (id) navigate(`/product/${id}`)
             })
           }
-          className="flex-1 flex items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 py-2.5 text-xs font-bold text-slate-600 transition-all duration-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
+          className="flex-1 flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 px-2 py-2.5 text-[13px] font-bold text-slate-600 transition-all duration-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
         >
-          View
+          {ctaLabel}
         </button>
         <button
           type="button"
@@ -196,7 +196,7 @@ export function ProductCard({
             });
             setTimeout(() => setIsAdding(false), 1500);
           }}
-          className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl border transition-all duration-300 py-2.5 text-xs font-black uppercase tracking-tight ${
+          className={`flex-1 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border transition-all duration-300 px-2 py-2.5 text-[13px] font-black uppercase tracking-tight ${
             isAdding 
             ? 'bg-green-600 border-green-600 text-white' 
             : 'border-rose-600 bg-white text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'

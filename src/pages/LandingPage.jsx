@@ -1452,6 +1452,32 @@ export default function LandingPage() {
                         className="h-full w-full object-cover"
                         loading="lazy"
                       />
+                      {/* Mobile-first overlay typography + CTA */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-5 text-left sm:p-6">
+                        <div className="max-w-[42rem]">
+                          {slide.heading ? (
+                            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl">
+                              {slide.heading}
+                            </h1>
+                          ) : null}
+                          {slide.subtext ? (
+                            <p className="mt-2 text-sm font-semibold leading-relaxed text-white/85 sm:text-base">
+                              {slide.subtext}
+                            </p>
+                          ) : null}
+                          {slide.ctaTo ? (
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                              <Link
+                                to={slide.ctaTo || '/'}
+                                className="min-h-[44px] inline-flex items-center justify-center rounded-full bg-red-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.99]"
+                              >
+                                {slide.cta || 'Explore'}
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1815,7 +1841,7 @@ export default function LandingPage() {
       />
 
       {/* Trust & social proof — full-width band + edge-to-edge partner strip */}
-      <section className="w-full bg-gradient-to-b from-[#6f0006] via-[#230001] to-black text-white">
+      <section className="w-full overflow-x-hidden bg-gradient-to-b from-[#6f0006] via-[#230001] to-black text-white">
         <div className="w-full px-4 py-12 sm:px-6 md:py-16 lg:px-10 xl:px-16">
           <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
             <h2 className="max-w-2xl text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">
@@ -1983,7 +2009,7 @@ export default function LandingPage() {
         </div>
 
         {/* Edge-to-edge partner strip (full viewport width) */}
-        <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 border-t border-white/10">
+        <div className="w-full overflow-hidden border-t border-white/10">
           <MajorBrandsMarquee fullBleed className="w-full" />
         </div>
       </section>
