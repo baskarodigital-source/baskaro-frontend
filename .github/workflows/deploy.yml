@@ -10,22 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Deploy to VPS via SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -34,7 +19,9 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /var/www/baskaro/frontend
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
             npm ci
             npm run build
-            sudo systemctl restart nginx
+            systemctl restart nginx
