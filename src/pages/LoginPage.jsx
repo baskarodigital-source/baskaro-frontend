@@ -86,6 +86,41 @@ function SubmitBtn({ disabled, loading, children }) {
   )
 }
 
+function AuthDivider() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-px flex-1 bg-slate-100" />
+      <span className="text-[10px] font-black uppercase tracking-wider text-slate-300">or</span>
+      <div className="h-px flex-1 bg-slate-100" />
+    </div>
+  )
+}
+
+function SignUpButton({ onClick, label = 'Sign Up' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-blue-200 bg-blue-50 py-3.5 text-sm font-black uppercase tracking-widest text-blue-700 transition-all hover:border-blue-300 hover:bg-blue-100"
+    >
+      {label}
+    </button>
+  )
+}
+
+function SignInPrompt({ onClick }) {
+  return (
+    <p className="text-center text-xs font-semibold text-slate-400">
+      Already have an account?{' '}
+      <button type="button" onClick={onClick}
+        className="font-black text-blue-600 hover:text-blue-700 transition-colors"
+      >
+        Sign In
+      </button>
+    </p>
+  )
+}
+
 // ─── Method tabs ────────────────────────────────────────────────────────────
 const METHODS = [
   { id: 'phone',  Icon: Phone,  label: 'Phone'  },
@@ -99,6 +134,13 @@ export default function LoginPage() {
   const location = useLocation()
   const redirectTo = location.state?.redirectTo
   const [method, setMethod] = useState('phone') // 'phone' | 'email' | 'google'
+  const [emailMode, setEmailMode] = useState('login') // 'login' | 'register'
+
+  function switchMethod(id, opts = {}) {
+    setMethod(id)
+    if (id === 'email' && opts.register) setEmailMode('register')
+    if (id === 'email' && opts.login) setEmailMode('login')
+  }
 
   function onSuccess(session) {
     setSession(session)
@@ -165,7 +207,7 @@ export default function LoginPage() {
             {/* Method selector tabs */}
             <div className="flex border-b border-slate-100">
               {METHODS.map(({ id, Icon, label }) => (
-                <button key={id} type="button" onClick={() => setMethod(id)}
+                <button key={id} type="button" onClick={() => switchMethod(id, { login: true })}
                   className={[
                     'flex flex-1 flex-col items-center gap-1 py-3.5 text-[11px] font-black uppercase tracking-wider transition-all',
                     method === id
@@ -185,9 +227,25 @@ export default function LoginPage() {
             {/* Form content */}
             <div className="p-7">
               <AnimatePresence mode="wait">
-                {method === 'phone'  && <PhoneFlow  key="phone"  onSuccess={onSuccess} />}
-                {method === 'email'  && <EmailFlow  key="email"  onSuccess={onSuccess} />}
-                {method === 'google' && <GoogleFlow key="google" />}
+                {method === 'phone'  && (
+                  <PhoneFlow
+                    key="phone"
+                    onSuccess={onSuccess}
+                  />
+                )}
+                {method === 'email'  && (
+                  <EmailFlow
+                    key={`email-${emailMode}`}
+                    initialMode={emailMode}
+                    onSuccess={onSuccess}
+                  />
+                )}
+                {method === 'google' && (
+                  <GoogleFlow
+                    key="google"
+                    onSignUpEmail={() => switchMethod('email', { register: true })}
+                  />
+                )}
               </AnimatePresence>
             </div>
           </motion.div>
@@ -251,14 +309,32 @@ function DevOtpHint({ code, onAutofill }) {
 // PHONE FLOW  (2-step OTP)
 // ─────────────────────────────────────────────────────────────────────────────
 function PhoneFlow({ onSuccess }) {
+  const [authMode, setAuthMode] = useState('login') // 'login' | 'register'
   const [step, setStep] = useState('phone') // 'phone' | 'otp' | 'success'
   const [phone, setPhone] = useState('')
+  const [name, setName] = useState('')
   const [otp, setOtp] = useState(Array(6).fill(''))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [timer, setTimer] = useState(0)
   const [devOtpCode, setDevOtpCode] = useState('')
   const timerRef = useRef(null)
+
+  function startSignUp() {
+    setAuthMode('register')
+    setStep('phone')
+    setError('')
+    setDevOtpCode('')
+    setOtp(Array(6).fill(''))
+  }
+
+  function startSignIn() {
+    setAuthMode('login')
+    setStep('phone')
+    setError('')
+    setDevOtpCode('')
+    setOtp(Array(6).fill(''))
+  }
 
   useEffect(() => () => clearInterval(timerRef.current), [])
 
@@ -274,9 +350,11 @@ function PhoneFlow({ onSuccess }) {
     setOtp(next)
   }
 
-  async function requestOtpAndMaybeShowModal() {
+  async function sendOtpRequest({ register = false } = {}) {
     const digits = phone.replace(/\D/g, '')
-    const res = await api.requestOtp({ phone: digits })
+    const res = register
+      ? await api.registerPhone({ name: name.trim(), phone: digits })
+      : await api.requestOtp({ phone: digits })
     if (res.error) return { error: res.error }
     if (res.otp) setDevOtpCode(String(res.otp))
     return {}
@@ -284,10 +362,11 @@ function PhoneFlow({ onSuccess }) {
 
   async function sendOtp(e) {
     e.preventDefault(); setError('')
+    if (authMode === 'register' && !name.trim()) { setError('Please enter your name.'); return }
     if (phone.replace(/\D/g, '').length !== 10) { setError('Enter a valid 10-digit number.'); return }
     setLoading(true)
     try {
-      const err = (await requestOtpAndMaybeShowModal()).error
+      const err = (await sendOtpRequest({ register: authMode === 'register' })).error
       if (err) { setError(err); setLoading(false); return }
       setLoading(false); setStep('otp'); startTimer()
     } catch (err) {
@@ -300,7 +379,7 @@ function PhoneFlow({ onSuccess }) {
     setError('')
     setLoading(true)
     try {
-      const err = (await requestOtpAndMaybeShowModal()).error
+      const err = (await sendOtpRequest()).error
       if (err) { setError(err); setLoading(false); return }
       setLoading(false)
       setOtp(Array(6).fill(''))
@@ -337,18 +416,40 @@ function PhoneFlow({ onSuccess }) {
         <>
           <div className="mb-1 flex items-center gap-2">
             <Phone size={16} className="text-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Step 1 of 2</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">
+              {authMode === 'register' ? 'Sign up' : 'Sign in'} · Step 1 of 2
+            </span>
           </div>
-          <h1 className="mt-1.5 text-xl font-black text-slate-900">Enter your mobile number</h1>
-          <p className="mt-1 text-sm text-slate-500">We'll send a 6-digit OTP to verify you.</p>
+          <h1 className="mt-1.5 text-xl font-black text-slate-900">
+            {authMode === 'register' ? 'Create your account' : 'Enter your mobile number'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {authMode === 'register'
+              ? 'Register with your mobile — we’ll send a 6-digit OTP to verify you.'
+              : 'We\'ll send a 6-digit OTP to verify you.'}
+          </p>
           <form onSubmit={sendOtp} className="mt-6 space-y-4">
+            {authMode === 'register' && (
+              <div>
+                <FieldLabel>Full Name</FieldLabel>
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  autoFocus
+                  onChange={e => { setName(e.target.value); setError('') }}
+                  className="h-11 w-full rounded-xl border-2 border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-300 transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            )}
             <div>
               <FieldLabel>Mobile Number</FieldLabel>
               <div className="flex items-center gap-3 rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-2.5 transition-all focus-within:border-blue-500 focus-within:bg-white focus-within:shadow-sm">
                 <span className="text-sm font-black text-slate-500">+91</span>
                 <div className="h-5 w-px bg-slate-300" />
                 <input type="tel" inputMode="numeric" maxLength={10} placeholder="9876543210"
-                  value={phone} autoFocus
+                  value={phone}
+                  autoFocus={authMode === 'login'}
                   onChange={e => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError('') }}
                   className="flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none placeholder:text-slate-300"
                 />
@@ -356,10 +457,29 @@ function PhoneFlow({ onSuccess }) {
               </div>
             </div>
             <ErrorMsg msg={error} />
-            <SubmitBtn disabled={phone.length < 10} loading={loading}>
-              Get OTP <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+            <SubmitBtn
+              disabled={phone.length < 10 || (authMode === 'register' && !name.trim())}
+              loading={loading}
+            >
+              {authMode === 'register' ? (
+                <>Sign Up &amp; Get OTP <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" /></>
+              ) : (
+                <>Get OTP <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" /></>
+              )}
             </SubmitBtn>
           </form>
+
+          {authMode === 'login' ? (
+            <div className="mt-5 space-y-3">
+              <AuthDivider />
+              <SignUpButton onClick={startSignUp} label="Sign Up" />
+            </div>
+          ) : (
+            <div className="mt-5">
+              <SignInPrompt onClick={startSignIn} />
+            </div>
+          )}
+
           <p className="mt-5 text-center text-[11px] text-slate-400">
             By continuing, you agree to our{' '}
             <a href="#" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Terms</a>
@@ -391,7 +511,11 @@ function PhoneFlow({ onSuccess }) {
             <OtpInput value={otp} onChange={setOtp} disabled={loading} />
             <ErrorMsg msg={error} />
             <SubmitBtn disabled={otp.join('').length < 6} loading={loading}>
-              Verify &amp; Login <ArrowRight size={14} />
+              {authMode === 'register' ? (
+                <>Verify &amp; Create Account <ArrowRight size={14} /></>
+              ) : (
+                <>Verify &amp; Login <ArrowRight size={14} /></>
+              )}
             </SubmitBtn>
             <div className="text-center">
               {timer > 0
@@ -413,8 +537,8 @@ function PhoneFlow({ onSuccess }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // EMAIL FLOW  (email + password, with forgot-pw)
 // ─────────────────────────────────────────────────────────────────────────────
-function EmailFlow({ onSuccess }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot' | 'success'
+function EmailFlow({ onSuccess, initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode) // 'login' | 'register' | 'forgot' | 'success'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -553,22 +677,22 @@ function EmailFlow({ onSuccess }) {
 
         <SubmitBtn disabled={!email} loading={loading}>
           {mode === 'login' ? <>Sign In <ArrowRight size={14} /></>
-            : mode === 'register' ? <>Create Account <ArrowRight size={14} /></>
+            : mode === 'register' ? <>Register <ArrowRight size={14} /></>
             : <>Send Reset Link <ArrowRight size={14} /></>
           }
         </SubmitBtn>
       </form>
 
-      {/* Toggle login ↔ register */}
-      {mode !== 'forgot' && (
-        <p className="mt-5 text-center text-xs font-semibold text-slate-400">
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}
-            className="font-black text-blue-600 hover:text-blue-700 transition-colors"
-          >
-            {mode === 'login' ? 'Register' : 'Sign In'}
-          </button>
-        </p>
+      {mode === 'login' && (
+        <div className="mt-5 space-y-3">
+          <AuthDivider />
+          <SignUpButton onClick={() => { setMode('register'); setError('') }} label="Sign Up" />
+        </div>
+      )}
+      {mode === 'register' && (
+        <div className="mt-5">
+          <SignInPrompt onClick={() => { setMode('login'); setError('') }} />
+        </div>
       )}
       {mode === 'forgot' && (
         <button type="button" onClick={() => { setMode('login'); setError('') }}
@@ -584,16 +708,20 @@ function EmailFlow({ onSuccess }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GOOGLE FLOW
 // ─────────────────────────────────────────────────────────────────────────────
-function GoogleFlow() {
+function GoogleFlow({ onSignUpEmail }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  function handleGoogle() {
+  function handleGoogle(signUp = false) {
     setLoading(true)
     setError('')
     setTimeout(() => {
       setLoading(false)
-      setError('Google sign-in is not configured for this backend. Use phone or email.')
+      setError(
+        signUp
+          ? 'Google sign-up is not configured yet. Use Phone or Email to register.'
+          : 'Google sign-in is not configured for this backend. Use phone or email.',
+      )
     }, 400)
   }
 
@@ -605,10 +733,10 @@ function GoogleFlow() {
             </div>
             <h2 className="text-xl font-black text-slate-900">Continue with Google</h2>
             <p className="mt-1.5 text-center text-sm text-slate-500">
-              Sign in instantly using your Google account. No password needed.
+              Sign in or register instantly with your Google account. No password needed.
             </p>
 
-            <button type="button" onClick={handleGoogle} disabled={loading}
+            <button type="button" onClick={() => handleGoogle(false)} disabled={loading}
               className="mt-7 flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-200 bg-white py-3.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading
@@ -617,6 +745,18 @@ function GoogleFlow() {
               }
             </button>
             {error && <p className="mt-4 text-center text-xs font-bold text-red-500">{error}</p>}
+
+            <div className="mt-5 w-full space-y-3">
+              <AuthDivider />
+              <SignUpButton onClick={() => handleGoogle(true)} label="Sign Up with Google" />
+              <button
+                type="button"
+                onClick={onSignUpEmail}
+                className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Or register with Email
+              </button>
+            </div>
 
             <div className="mt-6 flex w-full items-center gap-3">
               <div className="h-px flex-1 bg-slate-100" />

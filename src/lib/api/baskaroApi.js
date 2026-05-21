@@ -59,6 +59,10 @@ export async function requestOtp(body) {
   return apiRequest('/api/auth/otp/request', { method: 'POST', body })
 }
 
+export async function registerPhone(body) {
+  return apiRequest('/api/auth/otp/register', { method: 'POST', body })
+}
+
 export async function verifyOtp(body) {
   return apiRequest('/api/auth/otp/verify', { method: 'POST', body })
 }
