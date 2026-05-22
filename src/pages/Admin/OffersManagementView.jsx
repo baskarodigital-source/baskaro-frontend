@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, CheckCircle, Smartphone, Trash2, Pencil, RefreshCw, Upload, Tag } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
-
-const MAX_IMAGE_DATA_URL_CHARS = 1_900_000
+import { STORE_IMAGE_FOLDERS, ensureStoredImageUrl, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
 
 function saleFromMrpDiscount(mrpRaw, discountPctRaw) {
   const mrp = Number(mrpRaw)
@@ -19,50 +18,6 @@ function discountPercentFromPrices(mrpRaw, saleRaw) {
   return String(Math.round(((mrp - sale) / mrp) * 100))
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(String(r.result || ''))
-    r.onerror = () => reject(new Error('Could not read file'))
-    r.readAsDataURL(file)
-  })
-}
-
-/** Resize large images so data URLs fit API / DB limits */
-function compressDataUrl(dataUrl, maxWidth = 960, quality = 0.82) {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      let w = img.naturalWidth
-      let h = img.naturalHeight
-      if (w < 1 || h < 1) {
-        resolve(dataUrl)
-        return
-      }
-      if (w > maxWidth) {
-        h = Math.round((h * maxWidth) / w)
-        w = maxWidth
-      }
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        resolve(dataUrl)
-        return
-      }
-      ctx.drawImage(img, 0, 0, w, h)
-      try {
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      } catch {
-        resolve(dataUrl)
-      }
-    }
-    img.onerror = () => resolve(dataUrl)
-    img.src = dataUrl
-  })
-}
-
 export default function OffersManagementView() {
   const [sectionTitle, setSectionTitle] = useState('Hurry Up! Get Up to 40% Off')
   const [sectionSaving, setSectionSaving] = useState(false)
@@ -71,6 +26,7 @@ export default function OffersManagementView() {
   const [flashError, setFlashError] = useState('')
   const [flashModal, setFlashModal] = useState(null)
   const [flashSaving, setFlashSaving] = useState(false)
+  const [flashImageUploading, setFlashImageUploading] = useState(false)
   const flashImageInputRef = useRef(null)
 
   const [offers, setOffers] = useState([])
@@ -152,9 +108,12 @@ export default function OffersManagementView() {
     const saleComputed = Math.max(0, Math.round(mrpNum * (1 - discNum / 100)))
     setFlashSaving(true)
     try {
+      const storedImage = await ensureStoredImageUrl(String(imageUrl).trim(), {
+        folder: STORE_IMAGE_FOLDERS.flashDeals,
+      })
       const body = {
         title: title.trim(),
-        imageUrl: String(imageUrl).trim(),
+        imageUrl: storedImage,
         mrpInr: mrpNum,
         salePriceInr: saleComputed,
         sortOrder: Number(sortOrder) || 0,
@@ -537,7 +496,7 @@ export default function OffersManagementView() {
       </div>
 
       {flashModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <h3 className="flex items-center gap-2 text-lg font-black text-slate-900">
@@ -585,40 +544,36 @@ export default function OffersManagementView() {
                       const file = e.target.files?.[0]
                       e.target.value = ''
                       if (!file || !file.type.startsWith('image/')) return
+                      setFlashImageUploading(true)
                       try {
-                        let dataUrl = await readFileAsDataUrl(file)
-                        if (dataUrl.length > 400_000) {
-                          dataUrl = await compressDataUrl(dataUrl)
-                        }
-                        if (dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) {
-                          dataUrl = await compressDataUrl(dataUrl, 720, 0.75)
-                        }
-                        if (dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) {
-                          alert('Image is still too large. Use a smaller file or paste an image URL.')
-                          return
-                        }
-                        setFlashModal((m) => (m ? { ...m, imageUrl: dataUrl } : m))
-                      } catch {
-                        alert('Could not read the image file.')
+                        const url = await uploadStoreImageFile(file, {
+                          folder: STORE_IMAGE_FOLDERS.flashDeals,
+                        })
+                        setFlashModal((m) => (m ? { ...m, imageUrl: url } : m))
+                      } catch (err) {
+                        alert(err?.message || 'Could not upload image.')
+                      } finally {
+                        setFlashImageUploading(false)
                       }
                     }}
                   />
                   <button
                     type="button"
                     onClick={() => flashImageInputRef.current?.click()}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700"
+                    disabled={flashImageUploading}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60"
                   >
-                    <Upload size={16} strokeWidth={2.5} aria-hidden />
-                    Upload
+                    <Upload size={16} strokeWidth={2.5} className={flashImageUploading ? 'animate-pulse' : ''} aria-hidden />
+                    {flashImageUploading ? 'Uploading…' : 'Upload'}
                   </button>
                 </div>
                 <p className="mt-1.5 text-[11px] font-medium text-slate-400">
-                  JPG, PNG, or WebP. Large files are resized automatically.
+                  JPG, PNG, or WebP — stored on Cloudinary when configured.
                 </p>
-                {flashModal.imageUrl && flashModal.imageUrl.startsWith('data:image') ? (
+                {flashModal.imageUrl ? (
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
                     <img
-                      src={flashModal.imageUrl}
+                      src={api.resolveHomeServiceImageUrl(flashModal.imageUrl)}
                       alt=""
                       className="mx-auto max-h-40 w-auto max-w-full object-contain"
                     />
@@ -726,7 +681,7 @@ export default function OffersManagementView() {
       ) : null}
 
       {offerModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <h3 className="flex items-center gap-2 text-lg font-black text-slate-900">

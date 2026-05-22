@@ -8,6 +8,7 @@ import {
   patchBannerToggleStatus,
   postBanner,
 } from '../../lib/api/baskaroApi.js'
+import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
 
 const POSITION_OPTIONS = [
   { label: 'Homepage', value: 'HOME_HERO' },
@@ -46,6 +47,7 @@ export default function CmsManagementView() {
   const [isUploading, setIsUploading] = useState(false);
   const [newBanner, setNewBanner] = useState({ title: '', position: 'HOME_HERO', imgUrl: '' });
   const [uploadError, setUploadError] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -114,7 +116,7 @@ export default function CmsManagementView() {
     }
   };
 
-  const handleImageFile = (file) => {
+  const handleImageFile = async (file) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setUploadError('Please choose a valid image file.');
@@ -124,15 +126,16 @@ export default function CmsManagementView() {
       setUploadError('Image must be 2MB or smaller.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setNewBanner((prev) => ({ ...prev, imgUrl: String(reader.result || '') }));
-      setUploadError('');
-    };
-    reader.onerror = () => {
-      setUploadError('Could not read the image file. Try another image.');
-    };
-    reader.readAsDataURL(file);
+    setImageUploading(true);
+    setUploadError('');
+    try {
+      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.banners });
+      setNewBanner((prev) => ({ ...prev, imgUrl: url }));
+    } catch (err) {
+      setUploadError(err?.message || 'Could not upload image to Cloudinary.');
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const handleFileInputChange = (e) => {
@@ -202,7 +205,7 @@ export default function CmsManagementView() {
       </div>
 
       {isUploading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><ImageIcon size={18} className="text-blue-600"/> Upload New Banner</h3>

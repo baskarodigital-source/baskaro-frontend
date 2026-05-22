@@ -1,8 +1,7 @@
 import React from 'react'
 import { Plus, Trash2, Pencil, RefreshCw, Upload } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
-
-const MAX_IMAGE_DATA_URL_CHARS = 950_000
+import { STORE_IMAGE_FOLDERS, ensureStoredImageUrl, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
 
 function pathFromLabel(labelRaw, fallback = '/') {
   const label = String(labelRaw || '').trim().toLowerCase()
@@ -19,43 +18,6 @@ function pathFromLabel(labelRaw, fallback = '/') {
   return fallback
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload = () => resolve(String(r.result || ''))
-    r.onerror = () => reject(new Error('Could not read file'))
-    r.readAsDataURL(file)
-  })
-}
-
-function compressDataUrl(dataUrl, maxWidth = 640, quality = 0.82) {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      let w = img.naturalWidth
-      let h = img.naturalHeight
-      if (w < 1 || h < 1) return resolve(dataUrl)
-      if (w > maxWidth) {
-        h = Math.round((h * maxWidth) / w)
-        w = maxWidth
-      }
-      const canvas = document.createElement('canvas')
-      canvas.width = w
-      canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return resolve(dataUrl)
-      ctx.drawImage(img, 0, 0, w, h)
-      try {
-        resolve(canvas.toDataURL('image/jpeg', quality))
-      } catch {
-        resolve(dataUrl)
-      }
-    }
-    img.onerror = () => resolve(dataUrl)
-    img.src = dataUrl
-  })
-}
-
 function normalizeItems(res) {
   if (!res) return []
   if (Array.isArray(res)) return res
@@ -69,6 +31,7 @@ export default function ServicesManagementView() {
   const [err, setErr] = React.useState('')
   const [modal, setModal] = React.useState(null) // { _id?, label, path, sortOrder, isActive }
   const [saving, setSaving] = React.useState(false)
+  const [uploadingImage, setUploadingImage] = React.useState(false)
   const imageInputRef = React.useRef(null)
 
   const load = React.useCallback(async () => {
@@ -97,10 +60,14 @@ export default function ServicesManagementView() {
     const path = pathFromLabel(label, modal.path || '/')
     setSaving(true)
     try {
+      const rawImage = String(modal.imageUrl || '').trim()
+      const imageUrl = rawImage
+        ? await ensureStoredImageUrl(rawImage, { folder: STORE_IMAGE_FOLDERS.homeServices })
+        : ''
       const body = {
         label,
         path,
-        imageUrl: String(modal.imageUrl || '').trim(),
+        imageUrl,
         sortOrder: Number(modal.sortOrder) || 0,
         isActive: modal.isActive !== false,
       }
@@ -235,8 +202,8 @@ export default function ServicesManagementView() {
       </div>
 
       {modal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
               <h3 className="text-lg font-black text-slate-900">{modal._id ? 'Edit service' : 'New service'}</h3>
               <button
@@ -286,32 +253,32 @@ export default function ServicesManagementView() {
                       const file = e.target.files?.[0]
                       e.target.value = ''
                       if (!file || !file.type.startsWith('image/')) return
+                      setUploadingImage(true)
                       try {
-                        let dataUrl = await readFileAsDataUrl(file)
-                        if (dataUrl.length > 250_000) dataUrl = await compressDataUrl(dataUrl)
-                        if (dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) dataUrl = await compressDataUrl(dataUrl, 480, 0.75)
-                        if (dataUrl.length > MAX_IMAGE_DATA_URL_CHARS) {
-                          alert('Image too large. Use smaller file or paste an URL.')
-                          return
-                        }
-                        setModal((m) => (m ? { ...m, imageUrl: dataUrl } : m))
-                      } catch {
-                        alert('Could not read image.')
+                        const url = await uploadStoreImageFile(file, {
+                          folder: STORE_IMAGE_FOLDERS.homeServices,
+                        })
+                        setModal((m) => (m ? { ...m, imageUrl: url } : m))
+                      } catch (err) {
+                        alert(err?.message || 'Could not upload image.')
+                      } finally {
+                        setUploadingImage(false)
                       }
                     }}
                   />
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:bg-slate-100"
+                    disabled={uploadingImage}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
                   >
-                    <Upload size={16} strokeWidth={2.5} aria-hidden />
-                    Upload
+                    <Upload size={16} strokeWidth={2.5} className={uploadingImage ? 'animate-pulse' : ''} aria-hidden />
+                    {uploadingImage ? 'Uploading…' : 'Upload'}
                   </button>
                 </div>
-                {modal.imageUrl && String(modal.imageUrl).startsWith('data:image') ? (
+                {modal.imageUrl ? (
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
-                    <img src={modal.imageUrl} alt="" className="mx-auto max-h-28 w-auto max-w-full object-contain" />
+                    <img src={api.resolveHomeServiceImageUrl(modal.imageUrl)} alt="" className="mx-auto max-h-28 w-auto max-w-full object-contain" />
                   </div>
                 ) : null}
               </div>

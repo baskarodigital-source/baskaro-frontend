@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
-import { gPhoto } from '../constants/googleImages'
+import { gPhoto, REPAIR_PHONE_SERVICE_IMAGE } from '../constants/googleImages'
 import { DownloadAppBanner } from '../components/DownloadAppBanner'
 import { FlashDealsSection } from '../components/FlashDealsSection'
 import { ProductCard } from '../components/ProductCard'
@@ -49,9 +49,6 @@ const SERVICES_FALLBACK = [
 
 const NEARBY_STORE_IMAGE_URL =
   'https://img.freepik.com/premium-vector/shop-location-icon-3d-illustration-from-online-store-collection-creative-shop-location-3d-icon-web-design-templates-infographics-more_676904-843.jpg?semt=ais_incoming&w=740&q=80'
-
-const REPAIR_PHONE_IMAGE_URL =
-  'https://erepaircafe.com/wp-content/uploads/al_opt_content/IMAGE/erepaircafe.com/wp-content/uploads/2025/06/repair-phone.png.bv_resized_mobile.png.bv.webp?bv_host=erepaircafe.com'
 
 const FIND_NEW_PHONE_IMAGE_URL =
   'https://s3n.cashify.in/builder/4060695bca3447c2b7296aa5ba9ce827.webp'
@@ -490,7 +487,7 @@ const SERVICE_THUMBS = {
   'Buy Phone': BUY_PHONE_IMAGE_URL,
   'Buy Laptops': gPhoto(3),
   'Buy Accessories': NEW_ACCESSORIES_IMAGE_URL,
-  'Repair Phone': REPAIR_PHONE_IMAGE_URL,
+  'Repair Phone': REPAIR_PHONE_SERVICE_IMAGE,
   'Repair Laptop': gPhoto(0),
   Recycle: gPhoto(1),
   'Find New Phone': FIND_NEW_PHONE_IMAGE_URL,

@@ -3,9 +3,11 @@ import {
   UploadCloud, Trash2, Plus 
 } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
+import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../lib/storeImageUpload.js'
 
 export default function AddNewModelForm({ onCancel, category, brand, device, editingModel, onSave }) {
   const [imagePreview, setImagePreview] = useState(editingModel?.image || null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [specs, setSpecs] = useState([])
   const [specValues, setSpecValues] = useState(() => (editingModel?.specifications && typeof editingModel.specifications === 'object'
     ? { ...editingModel.specifications }
@@ -158,30 +160,33 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       .finally(() => setSaving(false))
   };
   
-  const handleImageChange = (file) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+  const handleImageChange = async (file) => {
+    if (!file?.type?.startsWith('image/')) return
+    setImageUploading(true)
+    try {
+      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.models })
+      setImagePreview(url)
+    } catch (err) {
+      setFormError(err?.message || 'Could not upload image.')
+    } finally {
+      setImageUploading(false)
     }
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-       <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-lg font-black text-slate-900">Create New Product Listing</h3>
-          <p className="text-sm text-slate-500 mt-1">Fill in the specifications to list a new item on the marketplace.</p>
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
+       <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:px-8 sm:py-6">
+          <h3 className="text-base font-black text-slate-900 sm:text-lg">Create New Product Listing</h3>
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">Fill in the specifications to list a new item on the marketplace.</p>
        </div>
 
-       <div className="p-8 grid gap-10 xl:grid-cols-3">
+       <div className="grid gap-8 p-4 sm:gap-10 sm:p-6 lg:p-8 xl:grid-cols-3">
           {/* Left Column - Image Upload */}
           <div className="xl:col-span-1 space-y-4">
              <label className="text-sm font-black uppercase text-slate-800 tracking-wider">Product Primary Image <span className="text-red-500">*</span></label>
              
              <div 
-               className="relative border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50/50 hover:bg-slate-50 hover:border-blue-400 transition-colors flex flex-col items-center justify-center h-72 cursor-pointer group overflow-hidden"
+               className="relative flex h-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 transition-colors group hover:border-blue-400 hover:bg-slate-50 sm:h-72"
                onDragOver={(e) => e.preventDefault()}
                onDrop={(e) => {
                  e.preventDefault();

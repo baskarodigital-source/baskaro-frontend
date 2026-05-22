@@ -23,7 +23,15 @@ export default function SellCategoryPage() {
     if (!config) return []
     if (config.useCatalogBrands) {
       if (brandsLoading) return []
-      return apiBrands.length ? apiBrands : PHONE_BRAND_FALLBACK
+      return apiBrands.length
+        ? apiBrands
+        : PHONE_BRAND_FALLBACK.map((name, index) => ({
+            name,
+            id: `fallback-${index}-${name}`,
+            slug: name.toLowerCase().replace(/\s+/g, '-'),
+            logoUrl: '',
+            logo: '',
+          }))
     }
     return config.brandsStatic ?? []
   }, [config, brandsLoading, apiBrands])

@@ -6,6 +6,7 @@ import {
   Headphones, Speaker, Cpu, Box, X, UploadCloud
 } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
+import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
 import CategoryBrandsView from '../../components/CategoryBrandsView.jsx'
 import BrandModelsView from '../../components/BrandModelsView.jsx'
 import BrandDevicesView from '../../components/BrandDevicesView.jsx'
@@ -119,7 +120,7 @@ export default function AllCategoriesView() {
       sortOrder: categories.length,
       isActive: true,
     };
-    if (catData.photo) body.imageUrl = catData.photo;
+    if (catData.photo) body.imageUrl = catData.photo
     try {
       await api.postRibbonCategory(body);
       await loadCategories();
@@ -134,7 +135,7 @@ export default function AllCategoriesView() {
     const body = {
       label: (catData.title || '').trim(),
     };
-    if (catData.photo) body.imageUrl = catData.photo;
+    if (catData.photo) body.imageUrl = catData.photo
     try {
       await api.patchRibbonCategory(editingCategory.id, body);
       await loadCategories();
@@ -165,7 +166,7 @@ export default function AllCategoriesView() {
   const handleOnAddBrand = async (name, logo) => {
     if (!selectedCategory) return;
     try {
-       await api.postMobileBrand({ name, imageUrl: logo, ribbonCategoryId: selectedCategory.id });
+       await api.postMobileBrand({ name, imageUrl: logo || '', ribbonCategoryId: selectedCategory.id });
        await loadBrands(selectedCategory.id);
     } catch (err) {
        throw err;
@@ -174,7 +175,7 @@ export default function AllCategoriesView() {
 
   const handleOnEditBrand = async (brandId, name, logo) => {
     try {
-       await api.patchMobileBrand(brandId, { name, imageUrl: logo });
+       await api.patchMobileBrand(brandId, { name, imageUrl: logo || '' });
        await loadBrands(selectedCategory.id);
     } catch (err) {
        throw err;
@@ -206,12 +207,12 @@ export default function AllCategoriesView() {
 
   const handleOnAddDevice = async (name, imageUrl) => {
     if (!selectedBrand) return;
-    await api.postBrandDevice({ brandId: selectedBrand.id, name, imageUrl });
+    await api.postBrandDevice({ brandId: selectedBrand.id, name, imageUrl: imageUrl || '' });
     await loadDevices(selectedBrand.id);
   };
 
   const handleOnEditDevice = async (deviceId, name, imageUrl) => {
-    await api.patchBrandDevice(deviceId, { name, imageUrl });
+    await api.patchBrandDevice(deviceId, { name, imageUrl: imageUrl || '' });
     await loadDevices(selectedBrand.id);
   };
 
@@ -230,22 +231,23 @@ export default function AllCategoriesView() {
            <motion.div key="cat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
               
               {/* Header Box */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                       <Box size={24} strokeWidth={2.5}/>
+              <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:rounded-3xl sm:p-6">
+                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-100 sm:h-12 sm:w-12 sm:rounded-2xl">
+                       <Box size={22} strokeWidth={2.5} className="sm:hidden" />
+                       <Box size={24} strokeWidth={2.5} className="hidden sm:block" />
                     </div>
-                    <div>
-                       <h2 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Catalog Management</h2>
-                       <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase mt-0.5">CONFIGURE CATEGORIES & PRODUCTS</p>
+                    <div className="min-w-0">
+                       <h2 className="truncate text-lg font-black leading-tight tracking-tight text-slate-800 sm:text-xl">Catalog Management</h2>
+                       <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400 sm:text-[11px]">Configure categories & products</p>
                     </div>
                  </div>
-                 <button onClick={() => setIsAddingCategory(true)} className="flex items-center gap-2 bg-[#0a0a0a] text-white rounded-2xl px-6 py-3 text-xs font-black transition-all hover:scale-[1.02] active:scale-95">
+                 <button type="button" onClick={() => setIsAddingCategory(true)} className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0a0a0a] px-5 py-3 text-xs font-black text-white transition-all hover:scale-[1.02] active:scale-95 sm:w-auto sm:rounded-2xl sm:px-6">
                     <Plus size={16} strokeWidth={3} /> Add Category
                  </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3 lg:gap-10 xl:grid-cols-4">
                  {loading && Array(4).fill(0).map((_, i) => (
                     <div key={i} className="aspect-[4/5] rounded-[2.5rem] bg-slate-100 animate-pulse"></div>
                  ))}
@@ -406,16 +408,23 @@ function AddNewCategoryModal({ onCancel, onSave }) {
     }
   };
 
-  const onPickPhoto = (e) => {
+  const onPickPhoto = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = () => setFormData((prev) => ({ ...prev, photo: reader.result }));
-    reader.readAsDataURL(file);
+    setBusy(true);
+    try {
+      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.ribbon });
+      setFormData((prev) => ({ ...prev, photo: url }));
+    } catch (err) {
+      alert(err?.message || 'Could not upload image.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
        {/* Overlay */}
        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
        
@@ -512,18 +521,25 @@ function EditCategoryModal({ category, onCancel, onSave }) {
     }
   };
 
-  const onPickPhoto = (e) => {
+  const onPickPhoto = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = () => setFormData((prev) => ({ ...prev, photo: reader.result }));
-    reader.readAsDataURL(file);
+    setBusy(true);
+    try {
+      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.ribbon });
+      setFormData((prev) => ({ ...prev, photo: url }));
+    } catch (err) {
+      alert(err?.message || 'Could not upload image.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const preview = formData.photo || category?.imageUrl || '';
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

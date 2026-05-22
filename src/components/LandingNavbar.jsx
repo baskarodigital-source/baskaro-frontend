@@ -210,6 +210,15 @@ export function LandingNavbar() {
   const user = getUser()
   const loggedIn = Boolean(token && user)
   const accountAriaLabel = loggedIn ? 'Account menu' : 'Log in or register'
+
+  /** Shared top-bar icon targets — same size on mobile/desktop to avoid overlap and misalignment */
+  const navIconBtn =
+    'relative isolate flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-rose-700 transition-colors hover:bg-rose-50 hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70'
+  const navCountBadge = (tone) =>
+    `pointer-events-none absolute right-0 top-0 flex h-[18px] min-w-[18px] -translate-y-1/3 translate-x-1/3 items-center justify-center rounded-full px-1 text-[10px] font-black leading-none text-white ring-2 ring-white ${
+      tone === 'cart' ? 'bg-slate-900' : 'bg-rose-600'
+    }`
+
   const navBaseClass =
     'flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-[15px] font-bold transition-all'
   const navDesktopClass = (active) =>
@@ -343,14 +352,14 @@ export function LandingNavbar() {
           </div>
         </div>
 
-        <div className="flex min-w-0 shrink-0 items-center justify-end max-md:-space-x-1 max-md:gap-0 md:ml-auto md:gap-2.5 md:space-x-0 lg:gap-3">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3">
           <button
             type="button"
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-600 transition-colors hover:text-slate-900 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70 lg:hidden"
+            className={`${navIconBtn} text-slate-600 hover:text-slate-900 lg:hidden`}
             aria-label="Toggle search"
           >
-            <Search size={18} />
+            <Search size={18} strokeWidth={2.25} />
           </button>
 
           <div className="hidden items-center gap-2 sm:flex">
@@ -362,35 +371,32 @@ export function LandingNavbar() {
 
           <Link
             to="/cart"
-            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/65 md:hover:border-rose-300 md:hover:bg-rose-100/70"
-            aria-label="Open cart"
+            className={navIconBtn}
+            aria-label={cartCount > 0 ? `Open cart, ${cartCount} items` : 'Open cart'}
           >
-            <ShoppingCart size={18} />
+            <ShoppingCart size={18} strokeWidth={2.25} />
             {cartCount > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-slate-900 px-1 text-center text-[9px] font-black leading-[16px] text-white">
-                {cartCount}
-              </span>
+              <span className={navCountBadge('cart')}>{cartCount > 9 ? '9+' : cartCount}</span>
             ) : null}
           </Link>
 
           <Link
             to="/wishlist"
-            className="relative flex h-7 w-7 shrink-0 items-center justify-center text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:hover:border-rose-300 md:hover:bg-rose-100/70"
-            aria-label="Open wishlist"
+            className={navIconBtn}
+            aria-label={wishlistCount > 0 ? `Open wishlist, ${wishlistCount} items` : 'Open wishlist'}
           >
-            <Heart size={18} />
+            <Heart size={18} strokeWidth={2.25} />
             {wishlistCount > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-rose-600 px-1 text-center text-[9px] font-black leading-[16px] text-white">
-                {wishlistCount}
-              </span>
+              <span className={navCountBadge('wishlist')}>{wishlistCount > 9 ? '9+' : wishlistCount}</span>
             ) : null}
           </Link>
 
           <button
             type="button"
-            className="hidden h-10 w-10 items-center justify-center rounded-xl border border-rose-200/80 bg-rose-50/70 text-rose-700 transition hover:border-rose-300 hover:bg-rose-100/70 hover:text-rose-800 lg:flex"
+            className={`${navIconBtn} hidden lg:flex`}
+            aria-label="Notifications"
           >
-            <Bell size={18} />
+            <Bell size={18} strokeWidth={2.25} />
           </button>
 
           {loggedIn ? (
@@ -398,12 +404,12 @@ export function LandingNavbar() {
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="flex h-8 w-8 items-center justify-center p-0 text-rose-700 transition hover:text-rose-800 md:h-10 md:w-10 md:rounded-xl md:border md:border-rose-200/80 md:bg-rose-50/70 md:p-2 md:hover:border-rose-300 md:hover:bg-rose-100/70"
+                className={navIconBtn}
                 aria-label={accountAriaLabel}
                 aria-expanded={profileMenuOpen}
                 aria-haspopup="menu"
               >
-                <UserCircle size={22} strokeWidth={2} aria-hidden />
+                <UserCircle size={20} strokeWidth={2.25} aria-hidden />
               </button>
               <AnimatePresence>
                 {profileMenuOpen && (
@@ -441,23 +447,33 @@ export function LandingNavbar() {
               </AnimatePresence>
             </div>
           ) : (
-            <Link
-              to="/login"
-              aria-label="Log in or sign up"
-              className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-900 transition hover:text-rose-600 sm:inline-flex sm:h-11 sm:w-auto sm:rounded-xl sm:border sm:border-rose-200/80 sm:bg-slate-900 sm:px-5 sm:text-white sm:hover:border-rose-300 sm:hover:bg-rose-600 sm:gap-1.5 sm:text-sm sm:font-black sm:shadow-lg sm:shadow-slate-900/10"
-            >
-              <LogIn size={18} strokeWidth={2.25} className="sm:hidden" aria-hidden />
-              <span className="hidden sm:inline">Login / Sign up</span>
-            </Link>
+            <>
+              <Link
+                to="/login"
+                aria-label="Log in or sign up"
+                className={`${navIconBtn} text-slate-800 hover:text-rose-700 md:hidden`}
+              >
+                <LogIn size={18} strokeWidth={2.25} aria-hidden />
+              </Link>
+              <Link
+                to="/login"
+                aria-label="Log in or sign up"
+                className="hidden h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-200/80 bg-slate-900 px-4 text-sm font-black text-white shadow-md shadow-slate-900/10 transition hover:border-rose-300 hover:bg-rose-600 md:inline-flex"
+              >
+                <LogIn size={16} strokeWidth={2.25} aria-hidden />
+                Login / Sign up
+              </Link>
+            </>
           )}
 
           <button
             type="button"
-            className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-900 transition-colors hover:text-rose-600 md:hidden"
+            className={`${navIconBtn} text-slate-800 hover:text-rose-700 md:hidden`}
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={20} strokeWidth={2.25} /> : <Menu size={20} strokeWidth={2.25} />}
           </button>
         </div>
       </div>

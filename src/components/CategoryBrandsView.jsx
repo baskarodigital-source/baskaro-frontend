@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../lib/storeImageUpload.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ChevronLeft, Plus, Edit2, Trash2, Package, UploadCloud 
@@ -12,6 +13,7 @@ export default function CategoryBrandsView({
   const [newBrandName, setNewBrandName] = useState('');
   const [brandImagePreview, setBrandImagePreview] = useState(null);
   const [brandSaving, setBrandSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const handleOpenEdit = (brand, e) => {
     e.stopPropagation();
@@ -21,13 +23,16 @@ export default function CategoryBrandsView({
     setIsAddingBrand(true);
   };
 
-  const handleBrandImageChange = (file) => {
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setBrandImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+  const handleBrandImageChange = async (file) => {
+    if (!file?.type?.startsWith('image/')) return
+    setLogoUploading(true)
+    try {
+      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.brands })
+      setBrandImagePreview(url)
+    } catch (err) {
+      window.alert(err?.message || 'Could not upload logo.')
+    } finally {
+      setLogoUploading(false)
     }
   };
   
@@ -45,17 +50,17 @@ export default function CategoryBrandsView({
        </div>
 
        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden min-h-[400px]">
-          <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-6">
              <div>
                 <h3 className="text-lg font-black text-slate-900">Manage Brands</h3>
                 <p className="text-sm font-bold text-slate-400">Configure vendors and brand details for {category.name}</p>
              </div>
-             <button onClick={() => setIsAddingBrand(true)} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+             <button type="button" onClick={() => setIsAddingBrand(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 sm:w-auto sm:px-6">
                 <Plus size={16} /> Add Brand
              </button>
           </div>
 
-          <div className="p-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 sm:gap-6 sm:p-6 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
              {brandsLoading && (
                 <div className="col-span-full py-12 text-center text-sm font-bold text-slate-500">
                   Loading brands…
@@ -118,8 +123,8 @@ export default function CategoryBrandsView({
        {/* Add Brand Modal */}
        <AnimatePresence>
           {isAddingBrand && (
-             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8">
+             <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl sm:p-8">
                    <h3 className="text-xl font-black text-slate-900 mb-6">{editingBrandId ? 'Edit Brand' : `Add Brand to ${category.name}`}</h3>
                    <div className="space-y-6">
                       <div>

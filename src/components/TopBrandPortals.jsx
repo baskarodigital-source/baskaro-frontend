@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { gBrandLogo } from '../constants/googleImages'
@@ -97,6 +97,31 @@ export const MARKETPLACE_PORTAL_CONTENT = {
   },
 }
 
+/** Accept API objects or plain brand name strings from static fallbacks */
+function normalizeBrandEntry(brand, index) {
+  if (typeof brand === 'string') {
+    const name = brand.trim()
+    return {
+      name,
+      id: `brand-${index}-${name}`,
+      slug: name.toLowerCase().replace(/\s+/g, '-'),
+      logoUrl: '',
+      logo: '',
+    }
+  }
+  const name = String(brand?.name ?? '').trim()
+  const id = brand?.id != null && String(brand.id) !== '' ? String(brand.id) : ''
+  const slug = String(brand?.slug ?? '').trim()
+  const logoUrl = brand?.logoUrl || brand?.logo || ''
+  return {
+    name,
+    id: id || slug || name || `brand-${index}`,
+    slug,
+    logoUrl,
+    logo: logoUrl,
+  }
+}
+
 /**
  * Horizontal “Top Selling Brands” row — same card layout as reference UI; content via `brands` only.
  */
@@ -120,7 +145,7 @@ function BrandRailSkeleton({ count = 10 }) {
 }
 
 export function TopSellingBrands({
-  brands,
+  brands = [],
   loading = false,
   title = 'Shop Phone by Brand',
   getHref = (brand) => defaultBrandPagePath(brand.name),
@@ -129,6 +154,10 @@ export function TopSellingBrands({
   const scrollerRef = useRef(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
+  const brandItems = useMemo(
+    () => (Array.isArray(brands) ? brands : []).map(normalizeBrandEntry),
+    [brands],
+  )
 
   useEffect(() => {
     const el = scrollerRef.current
@@ -148,7 +177,7 @@ export function TopSellingBrands({
       el.removeEventListener('scroll', update)
       ro.disconnect()
     }
-  }, [brands])
+  }, [brandItems])
 
   const scrollPrev = () => {
     scrollerRef.current?.scrollBy({ left: -320, behavior: 'smooth' })
@@ -214,15 +243,14 @@ export function TopSellingBrands({
         >
           {loading ? (
             <BrandRailSkeleton count={10} />
-          ) : brands.length === 0 ? (
+          ) : brandItems.length === 0 ? (
             <p className="py-6 text-sm font-semibold text-slate-500">No brands available yet. Check back soon.</p>
           ) : (
-            brands.map((brand) => {
+            brandItems.map((brand, index) => {
               const logoSrc = brand.logoUrl || brand.logo || ''
-              const key = brand.id || brand.slug || brand.name
               return (
                 <Link
-                  key={key}
+                  key={brand.id || `brand-${index}`}
                   to={getHref(brand)}
                   className="group flex min-w-[96px] shrink-0 flex-col items-center text-center"
                 >

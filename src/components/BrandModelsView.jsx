@@ -102,13 +102,13 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-       <div className="flex items-center gap-4">
-          <button onClick={onBack} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+       <div className="flex items-start gap-3 sm:items-center sm:gap-4">
+          <button type="button" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-all hover:border-blue-200 hover:text-blue-600">
              <ChevronLeft size={20} />
           </button>
-          <div className="flex items-baseline gap-2">
-             <h2 className="text-2xl font-black text-slate-900">{device?.name || brand.name}</h2>
-             <span className="text-sm font-bold text-slate-400">/ {brand.name} • {category.name} Models</span>
+          <div className="min-w-0">
+             <h2 className="truncate text-lg font-black text-slate-900 sm:text-2xl">{device?.name || brand.name}</h2>
+             <p className="truncate text-xs font-bold text-slate-400 sm:text-sm">{brand.name} • {category.name} Models</p>
           </div>
        </div>
 
@@ -123,12 +123,12 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
           />
        ) : (
           <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+             <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-6">
                 <div>
                    <h3 className="text-lg font-black text-slate-900">Registered Models</h3>
                    <p className="text-sm font-bold text-slate-400">Manage pricing and variants for {brand.name}</p>
                 </div>
-                <button onClick={() => setActiveTab('Add')} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-black shadow-lg hover:bg-black transition">
+                <button type="button" onClick={() => setActiveTab('Add')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-black text-white shadow-lg transition hover:bg-black sm:w-auto sm:px-6">
                    <Plus size={16} /> Add New {category.name === 'Smartphones' ? 'Mobile' : 'Product'}
                 </button>
              </div>

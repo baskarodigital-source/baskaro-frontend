@@ -499,8 +499,17 @@ export async function patchFlashDealSection(body) {
   return unwrap(await apiRequest('/api/flash-deals/admin/section', { method: 'PATCH', body, auth: true }))
 }
 
+// --- Cloudinary uploads (admin) ---
+export async function getCloudinaryUploadStatus() {
+  return apiRequest('/api/uploads/status')
+}
+
+export async function uploadImageToCloudinary(body) {
+  return apiRequest('/api/uploads/image', { method: 'POST', body, auth: true })
+}
+
 // --- Homepage services (public list + admin CRUD) ---
-/** Resolves admin-uploaded relative paths against `VITE_API_URL` (same pattern as catalog images). */
+/** Resolves image URLs: Cloudinary HTTPS, data URLs, or relative paths via `VITE_API_URL`. */
 export function resolveHomeServiceImageUrl(raw) {
   const t = String(raw ?? '').trim()
   if (!t) return ''

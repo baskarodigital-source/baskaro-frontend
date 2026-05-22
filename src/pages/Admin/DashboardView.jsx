@@ -104,14 +104,14 @@ export default function DashboardView() {
       {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Daily order volume</h3>
-              <p className="text-sm font-medium text-slate-500">From API (completed orders)</p>
+              <h3 className="text-base font-black text-slate-900 sm:text-lg">Daily order volume</h3>
+              <p className="text-xs font-medium text-slate-500 sm:text-sm">From API (completed orders)</p>
             </div>
-            <button type="button" className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 transition"><Download size={16}/> Export</button>
+            <button type="button" className="flex w-fit items-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100"><Download size={16}/> Export</button>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[220px] w-full min-w-0 sm:h-[300px]">
             {dailyChart.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-400">No order data for this period</div>
             ) : (
@@ -171,7 +171,7 @@ export default function DashboardView() {
               <p className="text-sm font-medium text-slate-500">In Indian Rupees (₹)</p>
             </div>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[220px] w-full min-w-0 sm:h-[300px]">
             {monthlyChart.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm font-semibold text-slate-400">No revenue data yet</div>
             ) : (
