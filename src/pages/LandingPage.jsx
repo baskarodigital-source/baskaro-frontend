@@ -7,24 +7,29 @@ import { FlashDealsSection } from '../components/FlashDealsSection'
 import { ProductCard } from '../components/ProductCard'
 import { TopSellingBrands } from '../components/TopBrandPortals'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
-
-// Import premium PNG assets for that "wow" effect
-import s25Front from '../assets/products/s25_titanium.jpg'
-import s25Back from '../assets/products/s25_back.png'
-import s25Perspective from '../assets/products/s25_inner.png'
-import iphone14Front from '../assets/products/iphone14_purple.jpg'
-
-import promoVivoBanner from '../assets/banners/promo_vivo_banner.png'
-import promoOppoBanner from '../assets/banners/promo_oppo_banner.png'
-import promoRedmiBanner from '../assets/banners/promo_redmi_banner.png'
+import { useInViewOnce } from '../hooks/useInViewOnce'
+import { optimizeDeliveryUrl } from '../lib/optimizeImageUrl.js'
 import {
   getBanners,
   getCatalogModels,
-  getCatalogPhoneBrands,
   getFeaturedPreOwned,
   getHomeServices,
   resolveHomeServiceImageUrl,
 } from '../lib/api/baskaroApi.js'
+
+/** Lightweight remote fallbacks — avoids bundling multi‑MB hero/promo PNGs on first load */
+const HERO_IMG_SELL =
+  'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop'
+const HERO_IMG_BUY =
+  'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?q=80&w=800&auto=format&fit=crop'
+const HERO_IMG_EXCHANGE =
+  'https://images.unsplash.com/photo-1567581935884-3349723552ca?q=80&w=800&auto=format&fit=crop'
+const PROMO_IMG_VIVO =
+  'https://images.unsplash.com/photo-1598327275664-50b41db7583c?q=80&w=640&auto=format&fit=crop'
+const PROMO_IMG_OPPO =
+  'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=640&auto=format&fit=crop'
+const PROMO_IMG_REDMI =
+  'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=640&auto=format&fit=crop'
 
 const TOP_NAV = [
   'All',
@@ -92,7 +97,7 @@ const HERO_CAROUSEL_FALLBACK = [
     cta: 'Sell now',
     ctaTo: '/sell/phone',
     bgClass: 'bg-red-50',
-    img: s25Back,
+    img: HERO_IMG_SELL,
   },
   {
     id: 'buy',
@@ -101,7 +106,7 @@ const HERO_CAROUSEL_FALLBACK = [
     cta: 'Shop deals',
     ctaTo: '/find-new-phone',
     bgClass: 'bg-blue-50',
-    img: s25Perspective,
+    img: HERO_IMG_BUY,
   },
   {
     id: 'exchange',
@@ -110,23 +115,28 @@ const HERO_CAROUSEL_FALLBACK = [
     cta: 'Start exchange',
     ctaTo: '/sell/phone',
     bgClass: 'bg-slate-100',
-    img: iphone14Front,
+    img: HERO_IMG_EXCHANGE,
   },
 ]
 
 const PROMO_BANNERS_FALLBACK = [
-  { id: 'promo-vivo', img: promoVivoBanner, alt: 'vivo T5x 5G', to: '/find-new-phone' },
-  { id: 'promo-oppo', img: promoOppoBanner, alt: 'OPPO A6 Pro 5G', to: '/find-new-phone' },
-  { id: 'promo-redmi', img: promoRedmiBanner, alt: 'REDMI Note 15 5G', to: '/find-new-phone' },
+  { id: 'promo-vivo', img: PROMO_IMG_VIVO, alt: 'vivo T5x 5G', to: '/find-new-phone' },
+  { id: 'promo-oppo', img: PROMO_IMG_OPPO, alt: 'OPPO A6 Pro 5G', to: '/find-new-phone' },
+  { id: 'promo-redmi', img: PROMO_IMG_REDMI, alt: 'REDMI Note 15 5G', to: '/find-new-phone' },
 ]
 
 function resolveHeroImageUrl(url) {
   if (!url || typeof url !== 'string') return ''
   const t = url.trim()
   if (!t) return ''
-  if (/^https?:\/\//i.test(t) || t.startsWith('data:') || t.startsWith('/')) return t
-  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-  return base ? `${base}/${t.replace(/^\//, '')}` : t
+  let resolved = t
+  if (/^https?:\/\//i.test(t) || t.startsWith('data:') || t.startsWith('/')) {
+    resolved = t
+  } else {
+    const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+    resolved = base ? `${base}/${t.replace(/^\//, '')}` : t
+  }
+  return optimizeDeliveryUrl(resolved, { width: 1200 })
 }
 
 function sanitizeHeroBgClass(raw) {
@@ -620,47 +630,52 @@ const NEW_BRANDED_PHONES = [
   },
 ]
 
-function BrandedPhonesSection() {
+function BrandedPhonesSection({ catalogBrands = [] }) {
   const [activeBrand, setActiveBrand] = useState('all')
   const scrollerRef = useRef(null)
+  const { ref: sectionRef, inView } = useInViewOnce({ rootMargin: '240px' })
   const [, setBrands] = useState([{ id: 'all', label: 'All', brandId: '' }])
   const [phones, setPhones] = useState(NEW_BRANDED_PHONES)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (!inView) return
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const apiBrands = await getCatalogPhoneBrands()
-        const list = Array.isArray(apiBrands) ? apiBrands : []
-        const top = list.slice(0, 12).map((b) => ({
-          id: String(b.slug || b.name || '').toLowerCase().replace(/\s+/g, '-') || String(b._id),
+        const fromCatalog = Array.isArray(catalogBrands) ? catalogBrands : []
+        const top = fromCatalog.slice(0, 12).map((b) => ({
+          id: String(b.slug || b.name || '')
+            .toLowerCase()
+            .replace(/\s+/g, '-') || String(b.id),
           label: b.name,
-          brandId: b._id,
+          brandId: b.id,
         }))
-        if (!cancelled && top.length) setBrands([{ id: 'all', label: 'All', brandId: '' }, ...top])
+        if (!top.length) {
+          if (!cancelled) setPhones(NEW_BRANDED_PHONES)
+          return
+        }
+        if (!cancelled) setBrands([{ id: 'all', label: 'All', brandId: '' }, ...top])
 
-        // Fetch models for first few brands (or all) to build cards.
-        const brandsToFetch = top.slice(0, 6)
+        const brandsToFetch = top.slice(0, 4)
         const modelLists = await Promise.all(
           brandsToFetch.map(async (b) => {
+            if (!b.brandId) return []
             try {
               const ms = await getCatalogModels({ brandId: b.brandId })
               const arr = Array.isArray(ms) ? ms : []
-              return arr.map((m) => ({
+              return arr.slice(0, 4).map((m) => ({
                 id: String(m._id),
                 brand: b.id,
                 brandLabel: b.label,
                 name: m.modelName || m.name || '',
-                image: m.image || '',
+                image: optimizeDeliveryUrl(m.image || '', { width: 400 }),
                 priceInr:
                   Array.isArray(m.storageVariants) && m.storageVariants.length
                     ? Math.min(...m.storageVariants.map((v) => Number(v.basePrice) || Infinity))
                     : Number(m.basePrice) || 0,
-                brandLogo: b.brandId ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-                  `${b.id}.com`,
-                )}&sz=128` : '',
+                brandLogo: '',
               }))
             } catch {
               return []
@@ -669,19 +684,22 @@ function BrandedPhonesSection() {
         )
         const flat = modelLists.flat().filter((x) => x.name)
         if (!cancelled && flat.length) {
-          // convert to the card shape used below
           setPhones(
-            flat.slice(0, 30).map((p, idx) => ({
+            flat.slice(0, 24).map((p, idx) => ({
               id: p.id,
               brand: p.brand,
               name: p.name,
               subtitle: p.brandLabel,
-              price: p.priceInr ? `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(p.priceInr)}` : '',
+              price: p.priceInr
+                ? `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(p.priceInr)}`
+                : '',
               originalPrice: '',
               discount: 0,
               badge: idx < 6 ? 'New' : 'Popular',
               badgeColor: idx < 6 ? 'bg-orange-500' : 'bg-indigo-600',
-              image: p.image || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=640&auto=format&fit=crop',
+              image:
+                p.image ||
+                'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=400&auto=format&fit=crop',
               brandLogo: '',
             })),
           )
@@ -696,7 +714,7 @@ function BrandedPhonesSection() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [inView, catalogBrands])
 
   const filtered =
     activeBrand === 'all' ? phones : phones.filter((p) => String(p.brand) === String(activeBrand))
@@ -708,7 +726,10 @@ function BrandedPhonesSection() {
   }
 
   return (
-    <section className="w-full border-y border-red-950/40 bg-gradient-to-b from-[#6f0006] via-[#230001] to-black py-8">
+    <section
+      ref={sectionRef}
+      className="w-full border-y border-red-950/40 bg-gradient-to-b from-[#6f0006] via-[#230001] to-black py-8"
+    >
       <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16">
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-4">
@@ -854,7 +875,7 @@ function mapFeaturedPreOwnedFromApi(row) {
 const PRE_OWNED_DEVICES_CAROUSEL = [
   {
     id: 'samsung-s25-edge',
-    image: s25Front, // Premium PNG
+    image: HERO_IMG_SELL,
     title: 'Samsung Galaxy S25 Edge - Pre-Owned',
     price: '₹57,599',
     originalPrice: '₹75,900',
@@ -865,7 +886,7 @@ const PRE_OWNED_DEVICES_CAROUSEL = [
   },
   {
     id: 'iphone-14',
-    image: iphone14Front, // Premium PNG
+    image: HERO_IMG_EXCHANGE,
     title: 'Apple iPhone 14 - Pre-Owned',
     price: '₹29,999',
     originalPrice: '₹42,900',
@@ -876,7 +897,7 @@ const PRE_OWNED_DEVICES_CAROUSEL = [
   },
   {
     id: 'samsung-s25-back',
-    image: s25Back,
+    image: HERO_IMG_BUY,
     title: 'Samsung Galaxy S25 Edge (12/256GB)',
     price: '₹56,499',
     originalPrice: '₹113,799',
@@ -1300,71 +1321,58 @@ export default function LandingPage() {
   useEffect(() => {
     let cancelled = false
     setServicesLoading(true)
-    getHomeServices()
-      .then((list) => {
+    setFeaturedPreOwnedLoading(true)
+
+    Promise.all([
+      getHomeServices().catch(() => null),
+      getFeaturedPreOwned({ limit: 12 }).catch(() => null),
+      getBanners({ active: true }).catch(() => null),
+    ])
+      .then(([servicesList, featuredList, bannersList]) => {
         if (cancelled) return
-        const arr = Array.isArray(list) ? list : []
+
+        const arr = Array.isArray(servicesList) ? servicesList : []
         const mapped = arr
           .map((s) => {
             const id = String(s._id ?? s.id ?? '').trim()
             const label = String(s.label || '').trim()
             const path = String(s.path || '').trim()
-            const resolved = resolveHomeServiceImageUrl(s.imageUrl)
+            const resolved = resolveHomeServiceImageUrl(s.imageUrl, { width: 320 })
             const imageUrl = resolved || serviceThumbForLabel(label)
             return { id: id || `svc-${label}`, label, path, imageUrl }
           })
           .filter((s) => s.label && s.path)
         if (mapped.length) setServices(mapped)
         else setServices(buildFallbackHomeServiceRows())
-      })
-      .catch(() => {
-        if (!cancelled) setServices(buildFallbackHomeServiceRows())
-      })
-      .finally(() => {
-        if (!cancelled) setServicesLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    setFeaturedPreOwnedLoading(true)
-    getFeaturedPreOwned({ limit: 12 })
-      .then((list) => {
-        if (cancelled) return
-        const arr = Array.isArray(list) ? list : []
-        setFeaturedPreOwned(arr.map(mapFeaturedPreOwnedFromApi).filter((p) => p.title && p.price && p.price !== '—'))
-      })
-      .catch(() => {
-        if (!cancelled) setFeaturedPreOwned([])
-      })
-      .finally(() => {
-        if (!cancelled) setFeaturedPreOwnedLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+        const featuredArr = Array.isArray(featuredList) ? featuredList : []
+        setFeaturedPreOwned(
+          featuredArr.map(mapFeaturedPreOwnedFromApi).filter((p) => p.title && p.price && p.price !== '—'),
+        )
 
-  useEffect(() => {
-    let cancelled = false
-    getBanners({ active: true })
-      .then((list) => {
-        if (cancelled) return
-        const arr = Array.isArray(list) ? list : []
-        const mappedHero = mapHeroBannersFromApi(arr)
+        const bannerArr = Array.isArray(bannersList) ? bannersList : []
+        const mappedHero = mapHeroBannersFromApi(bannerArr)
         if (mappedHero.length) {
           setHeroSlides(mappedHero)
           setHeroSlide(0)
         }
-        const mappedPromo = mapPromoBannersFromApi(arr)
+        const mappedPromo = mapPromoBannersFromApi(bannerArr)
         setPromoBanners(mappedPromo.length ? mappedPromo : PROMO_BANNERS_FALLBACK)
       })
       .catch(() => {
-        if (!cancelled) setPromoBanners(PROMO_BANNERS_FALLBACK)
+        if (!cancelled) {
+          setServices(buildFallbackHomeServiceRows())
+          setFeaturedPreOwned([])
+          setPromoBanners(PROMO_BANNERS_FALLBACK)
+        }
       })
+      .finally(() => {
+        if (!cancelled) {
+          setServicesLoading(false)
+          setFeaturedPreOwnedLoading(false)
+        }
+      })
+
     return () => {
       cancelled = true
     }
@@ -1639,7 +1647,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── New Branded Phones (replaces Best Selling Phones) ── */}
-      <BrandedPhonesSection />
+      <BrandedPhonesSection catalogBrands={catalogBrands} />
 
       {/* Sell Your Old Device Now */}
       <section id="sell-your-device" className="w-full scroll-mt-20 py-10">

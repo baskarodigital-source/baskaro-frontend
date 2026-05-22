@@ -1,4 +1,5 @@
 import { apiRequest, unwrap } from './client.js'
+import { optimizeDeliveryUrl } from '../optimizeImageUrl.js'
 
 // --- Health ---
 export async function getHealth() {
@@ -510,16 +511,20 @@ export async function uploadImageToCloudinary(body) {
 
 // --- Homepage services (public list + admin CRUD) ---
 /** Resolves image URLs: Cloudinary HTTPS, data URLs, or relative paths via `VITE_API_URL`. */
-export function resolveHomeServiceImageUrl(raw) {
+export function resolveHomeServiceImageUrl(raw, opts) {
   const t = String(raw ?? '').trim()
   if (!t) return ''
-  if (/^https?:\/\//i.test(t) || t.startsWith('data:')) return t
-  if (t.startsWith('/')) {
+  let url = t
+  if (/^https?:\/\//i.test(t) || t.startsWith('data:')) {
+    url = t
+  } else if (t.startsWith('/')) {
     const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-    return base ? `${base}${t}` : t
+    url = base ? `${base}${t}` : t
+  } else {
+    const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+    url = base ? `${base}/${t.replace(/^\//, '')}` : t
   }
-  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-  return base ? `${base}/${t.replace(/^\//, '')}` : t
+  return optimizeDeliveryUrl(url, opts)
 }
 
 export async function getFeaturedPreOwned(params = {}) {

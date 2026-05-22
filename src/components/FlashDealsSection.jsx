@@ -144,7 +144,7 @@ export function FlashDealsSection() {
   const scrollRef = useRef(null)
   const [activeTab, setActiveTab] = useState(0)
   const [deals, setDeals] = useState(FLASH_DEALS_FALLBACK)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [usedFallback, setUsedFallback] = useState(true)
   const [title, setTitle] = useState('Hurry Up! Get Up to 40% Off')
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { getToken, isAdminUser, logout } from '../lib/auth.js'
 
-import DashboardView from './Admin/DashboardView.jsx'
+import { PageSpinner } from '../components/PageSpinner.jsx'
 import UsersManagementView from './Admin/UsersManagementView.jsx'
 import AllCategoriesView from './Admin/AllCategoriesView.jsx'
 import ConditionPricingView from './Admin/ConditionPricingView.jsx'
@@ -19,8 +19,10 @@ import InventoryManagementView from './Admin/InventoryManagementView.jsx'
 import OffersManagementView from './Admin/OffersManagementView.jsx'
 import ServicesManagementView from './Admin/ServicesManagementView.jsx'
 import CmsManagementView from './Admin/CmsManagementView.jsx'
-import AnalyticsManagementView from './Admin/AnalyticsManagementView.jsx'
 import RolesManagementView from './Admin/RolesManagementView.jsx'
+
+const DashboardView = lazy(() => import('./Admin/DashboardView.jsx'))
+const AnalyticsManagementView = lazy(() => import('./Admin/AnalyticsManagementView.jsx'))
 
 const navSections = [
   {
@@ -145,22 +147,38 @@ export default function AdminDashboard() {
     setMobileSearchOpen(false)
   }
 
+  const heavyPanel = (node) => <Suspense fallback={<PageSpinner />}>{node}</Suspense>
+
   const renderContent = () => {
     switch (tab) {
-      case 'Dashboard': return <DashboardView />
-      case 'Users': return <UsersManagementView />
-      case 'Catalog': return <AllCategoriesView />
-      case 'Pricing': return <ConditionPricingView />
-      case 'Orders': return <OrdersManagementView />
-      case 'Pickups': return <PickupsManagementView />
-      case 'Payments': return <PaymentsManagementView />
-      case 'Inventory': return <InventoryManagementView />
-      case 'Offers': return <OffersManagementView />
-      case 'Services': return <ServicesManagementView />
-      case 'CMS': return <CmsManagementView />
-      case 'Analytics': return <AnalyticsManagementView />
-      case 'Roles': return <RolesManagementView />
-      default: return <DashboardView />
+      case 'Dashboard':
+        return heavyPanel(<DashboardView />)
+      case 'Users':
+        return <UsersManagementView />
+      case 'Catalog':
+        return <AllCategoriesView />
+      case 'Pricing':
+        return <ConditionPricingView />
+      case 'Orders':
+        return <OrdersManagementView />
+      case 'Pickups':
+        return <PickupsManagementView />
+      case 'Payments':
+        return <PaymentsManagementView />
+      case 'Inventory':
+        return <InventoryManagementView />
+      case 'Offers':
+        return <OffersManagementView />
+      case 'Services':
+        return <ServicesManagementView />
+      case 'CMS':
+        return <CmsManagementView />
+      case 'Analytics':
+        return heavyPanel(<AnalyticsManagementView />)
+      case 'Roles':
+        return <RolesManagementView />
+      default:
+        return heavyPanel(<DashboardView />)
     }
   }
 

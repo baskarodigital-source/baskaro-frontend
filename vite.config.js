@@ -13,6 +13,22 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return
+            if (id.includes('recharts')) return 'recharts'
+            if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('dompurify'))
+              return 'pdf-export'
+            if (id.includes('xlsx')) return 'xlsx'
+            if (id.includes('framer-motion')) return 'motion'
+            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/'))
+              return 'react-vendor'
+          },
+        },
+      },
+    },
     server: {
       host: true,
       port: 3000,

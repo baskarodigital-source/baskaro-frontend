@@ -20,7 +20,7 @@ export function useCatalogBrands() {
           ? list
               .map((b) => {
                 const raw = String(b.imageUrl || b.image || '').trim()
-                const imageUrl = resolveHomeServiceImageUrl(raw) || raw
+                const imageUrl = resolveHomeServiceImageUrl(raw, { width: 160 }) || raw
                 return {
                   name: b.name || '',
                   slug: b.slug || '',

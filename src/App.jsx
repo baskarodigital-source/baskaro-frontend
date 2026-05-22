@@ -1,44 +1,53 @@
 // Routes: admin uses shared /login (see LoginPage redirectTo), not a separate admin login page.
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { MainLayout } from './components/MainLayout'
 import { Button } from './components/Button'
-import LandingPage from './pages/LandingPage'
-import HomePage from './pages/HomePage'
-import BrandPage from './pages/BrandPage'
-import MarketplacePage from './pages/MarketplacePage'
-import LoginPage from './pages/LoginPage'
-import UserDashboard from './pages/UserDashboard'
-import SellPhonePage from './pages/SellPhonePage'
-import SellCategoryPage from './pages/SellCategoryPage'
-import SellSubPage from './pages/SellSubPage'
-import SellDeviceCheckPage from './pages/SellDeviceCheckPage'
-import SellDefectsPage from './pages/SellDefectsPage'
-import SellFunctionalProblemsPage from './pages/SellFunctionalProblemsPage'
-import SellAccessoriesPage from './pages/SellAccessoriesPage'
-import SellModelDetailPage from './pages/SellModelDetailPage'
-import AdminDashboard from './pages/AdminDashboard'
-import BuyAccessoriesPage from './pages/BuyAccessoriesPage'
-import RepairPhonePage from './pages/RepairPhonePage'
-import FindNewPhonePage from './pages/FindNewPhonePage'
-import FindNewGadgetsPage from './pages/FindNewGadgetsPage'
-import FindNewGadgetsSectionPage from './pages/FindNewGadgetsSectionPage'
-import BuyPreOwnedPage from './pages/BuyPreOwnedPage'
-import BuyPreOwnedExplorePage from './pages/BuyPreOwnedExplorePage'
-import BuyPreOwnedProductPage from './pages/BuyPreOwnedProductPage'
-import NearbyStoresPage from './pages/NearbyStoresPage'
+import { PageSpinner } from './components/PageSpinner'
 import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
-import CartPage from './pages/CartPage'
-import WishlistPage from './pages/WishlistPage'
-import ProductDetailsPage from './pages/ProductDetailsPage'
-import ViewDetailsPage from './pages/ViewDetailsPage'
-import AboutPage from './pages/AboutPage'
-import WarrantyPolicyPage from './pages/WarrantyPolicyPage'
-import ReferEarnPage from './pages/ReferEarnPage'
-import CareersPage from './pages/CareersPage'
-import PressReleasesPage from './pages/PressReleasesPage'
-import ProfilePage from './pages/ProfilePage'
-import InfoPage from './pages/InfoPage'
+
+// Homepage stays eager for fastest first paint on "/"
+import LandingPage from './pages/LandingPage'
+
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const HomePage = lazy(() => import('./pages/HomePage'))
+const BrandPage = lazy(() => import('./pages/BrandPage'))
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const UserDashboard = lazy(() => import('./pages/UserDashboard'))
+const SellPhonePage = lazy(() => import('./pages/SellPhonePage'))
+const SellCategoryPage = lazy(() => import('./pages/SellCategoryPage'))
+const SellSubPage = lazy(() => import('./pages/SellSubPage'))
+const SellDeviceCheckPage = lazy(() => import('./pages/SellDeviceCheckPage'))
+const SellDefectsPage = lazy(() => import('./pages/SellDefectsPage'))
+const SellFunctionalProblemsPage = lazy(() => import('./pages/SellFunctionalProblemsPage'))
+const SellAccessoriesPage = lazy(() => import('./pages/SellAccessoriesPage'))
+const SellModelDetailPage = lazy(() => import('./pages/SellModelDetailPage'))
+const BuyAccessoriesPage = lazy(() => import('./pages/BuyAccessoriesPage'))
+const RepairPhonePage = lazy(() => import('./pages/RepairPhonePage'))
+const FindNewPhonePage = lazy(() => import('./pages/FindNewPhonePage'))
+const FindNewGadgetsPage = lazy(() => import('./pages/FindNewGadgetsPage'))
+const FindNewGadgetsSectionPage = lazy(() => import('./pages/FindNewGadgetsSectionPage'))
+const BuyPreOwnedPage = lazy(() => import('./pages/BuyPreOwnedPage'))
+const BuyPreOwnedExplorePage = lazy(() => import('./pages/BuyPreOwnedExplorePage'))
+const BuyPreOwnedProductPage = lazy(() => import('./pages/BuyPreOwnedProductPage'))
+const NearbyStoresPage = lazy(() => import('./pages/NearbyStoresPage'))
+const CartPage = lazy(() => import('./pages/CartPage'))
+const WishlistPage = lazy(() => import('./pages/WishlistPage'))
+const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'))
+const ViewDetailsPage = lazy(() => import('./pages/ViewDetailsPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const WarrantyPolicyPage = lazy(() => import('./pages/WarrantyPolicyPage'))
+const ReferEarnPage = lazy(() => import('./pages/ReferEarnPage'))
+const CareersPage = lazy(() => import('./pages/CareersPage'))
+const PressReleasesPage = lazy(() => import('./pages/PressReleasesPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const InfoPage = lazy(() => import('./pages/InfoPage'))
+
+function LazyPage({ children }) {
+  return <Suspense fallback={<PageSpinner />}>{children}</Suspense>
+}
 
 function NotFoundPage() {
   return (
@@ -61,53 +70,340 @@ export default function App() {
       <WishlistProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="/admin"
+              element={
+                <LazyPage>
+                  <AdminDashboard />
+                </LazyPage>
+              }
+            />
             <Route
               path="/*"
               element={
                 <MainLayout>
                   <Routes>
                     <Route path="/" element={<LandingPage />} />
-                    <Route path="/home" element={<HomePage />} />
-                    <Route path="/brand/:brandName" element={<BrandPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/dashboard" element={<UserDashboard />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/sell/sub" element={<SellSubPage />} />
-                    <Route path="/sell/device-check" element={<SellDeviceCheckPage />} />
-                    <Route path="/sell/defects" element={<SellDefectsPage />} />
-                    <Route path="/sell/functional-problems" element={<SellFunctionalProblemsPage />} />
-                    <Route path="/sell/accessories" element={<SellAccessoriesPage />} />
-                    <Route path="/sell/model-detail" element={<SellModelDetailPage />} />
-                    <Route path="/sell/:category" element={<SellCategoryPage />} />
-                    <Route path="/sell-phone" element={<SellPhonePage />} />
-                    <Route path="/buy-accessories" element={<BuyAccessoriesPage />} />
-                    <Route path="/buy-pre-owned/:kind/:slug" element={<BuyPreOwnedExplorePage />} />
-                    <Route path="/buy-pre-owned/product/:kind/:slug/:productId" element={<BuyPreOwnedProductPage />} />
-                    <Route path="/buy-pre-owned" element={<BuyPreOwnedPage />} />
-                    <Route path="/marketplace" element={<MarketplacePage />} />
-                    <Route path="/repair-phone" element={<RepairPhonePage />} />
-                    <Route path="/find-new-gadgets" element={<FindNewGadgetsPage />} />
-                    <Route path="/find-new-gadgets/explore/:slug" element={<FindNewGadgetsSectionPage />} />
-                    <Route path="/find-new-gadgets/:slug" element={<FindNewGadgetsSectionPage />} />
-                    <Route path="/find-new-phone" element={<FindNewPhonePage />} />
-                    <Route path="/cart" element={<CartPage />} />
-                    <Route path="/wishlist" element={<WishlistPage />} />
-                    <Route path="/nearby-stores" element={<NearbyStoresPage />} />
-                    <Route path="/product/:id" element={<ProductDetailsPage />} />
-                    <Route path="/store/:storeId" element={<ViewDetailsPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/new-offers" element={<InfoPage />} />
-                    <Route path="/partner" element={<InfoPage />} />
-                    <Route path="/contact" element={<InfoPage />} />
-                    <Route path="/contact-us" element={<InfoPage />} />
-                    <Route path="/warranty-policy" element={<WarrantyPolicyPage />} />
-                    <Route path="/refer-earn" element={<ReferEarnPage />} />
-                    <Route path="/careers" element={<CareersPage />} />
-                    <Route path="/articles" element={<InfoPage />} />
-                    <Route path="/become-partner" element={<InfoPage />} />
-                    <Route path="/press-releases" element={<PressReleasesPage />} />
-                    <Route path="/terms-and-conditions" element={<InfoPage />} />
+                    <Route
+                      path="/home"
+                      element={
+                        <LazyPage>
+                          <HomePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/brand/:brandName"
+                      element={
+                        <LazyPage>
+                          <BrandPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/login"
+                      element={
+                        <LazyPage>
+                          <LoginPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <LazyPage>
+                          <UserDashboard />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <LazyPage>
+                          <ProfilePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/sub"
+                      element={
+                        <LazyPage>
+                          <SellSubPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/device-check"
+                      element={
+                        <LazyPage>
+                          <SellDeviceCheckPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/defects"
+                      element={
+                        <LazyPage>
+                          <SellDefectsPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/functional-problems"
+                      element={
+                        <LazyPage>
+                          <SellFunctionalProblemsPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/accessories"
+                      element={
+                        <LazyPage>
+                          <SellAccessoriesPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/model-detail"
+                      element={
+                        <LazyPage>
+                          <SellModelDetailPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/:category"
+                      element={
+                        <LazyPage>
+                          <SellCategoryPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell-phone"
+                      element={
+                        <LazyPage>
+                          <SellPhonePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/buy-accessories"
+                      element={
+                        <LazyPage>
+                          <BuyAccessoriesPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/buy-pre-owned/:kind/:slug"
+                      element={
+                        <LazyPage>
+                          <BuyPreOwnedExplorePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/buy-pre-owned/product/:kind/:slug/:productId"
+                      element={
+                        <LazyPage>
+                          <BuyPreOwnedProductPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/buy-pre-owned"
+                      element={
+                        <LazyPage>
+                          <BuyPreOwnedPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/marketplace"
+                      element={
+                        <LazyPage>
+                          <MarketplacePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/repair-phone"
+                      element={
+                        <LazyPage>
+                          <RepairPhonePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/find-new-gadgets"
+                      element={
+                        <LazyPage>
+                          <FindNewGadgetsPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/find-new-gadgets/explore/:slug"
+                      element={
+                        <LazyPage>
+                          <FindNewGadgetsSectionPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/find-new-gadgets/:slug"
+                      element={
+                        <LazyPage>
+                          <FindNewGadgetsSectionPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/find-new-phone"
+                      element={
+                        <LazyPage>
+                          <FindNewPhonePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/cart"
+                      element={
+                        <LazyPage>
+                          <CartPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/wishlist"
+                      element={
+                        <LazyPage>
+                          <WishlistPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/nearby-stores"
+                      element={
+                        <LazyPage>
+                          <NearbyStoresPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/product/:id"
+                      element={
+                        <LazyPage>
+                          <ProductDetailsPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/store/:storeId"
+                      element={
+                        <LazyPage>
+                          <ViewDetailsPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/about"
+                      element={
+                        <LazyPage>
+                          <AboutPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/new-offers"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/partner"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/contact"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/contact-us"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/warranty-policy"
+                      element={
+                        <LazyPage>
+                          <WarrantyPolicyPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/refer-earn"
+                      element={
+                        <LazyPage>
+                          <ReferEarnPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/careers"
+                      element={
+                        <LazyPage>
+                          <CareersPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/articles"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/become-partner"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/press-releases"
+                      element={
+                        <LazyPage>
+                          <PressReleasesPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/terms-and-conditions"
+                      element={
+                        <LazyPage>
+                          <InfoPage />
+                        </LazyPage>
+                      }
+                    />
                     <Route path="/landing" element={<Navigate to="/" replace />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Routes>
