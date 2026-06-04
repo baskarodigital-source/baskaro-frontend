@@ -19,6 +19,7 @@ import {
   MAX_VIDEO_FILE_BYTES,
   formatMegabytes,
   getCloudinaryStatus,
+  prefetchVideoUploadSignature,
   isCloudinaryUrl,
   isLocalMediaUrl,
   isImageFile,
@@ -95,6 +96,7 @@ function MediaCard({
   const isDragging = dragIndex === index
   const isVideo = item.kind === 'video'
   const progress = item.uploadProgress
+  const mediaSrc = String(item.url || '').trim() || null
 
   return (
     <motion.div
@@ -127,13 +129,19 @@ function MediaCard({
 
       {isVideo ? (
         <>
-          <video
-            src={item.url}
-            className="h-full w-full object-cover"
-            muted
-            playsInline
-            preload="metadata"
-          />
+          {mediaSrc ? (
+            <video
+              src={mediaSrc}
+              className="h-full w-full object-cover"
+              muted
+              playsInline
+              preload="metadata"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-slate-100">
+              <Film size={28} className="text-slate-300" />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => onPlayVideo(item)}
@@ -149,14 +157,18 @@ function MediaCard({
             Video
           </span>
         </>
-      ) : (
+      ) : mediaSrc ? (
         <>
-          <img src={item.url} alt="" className="h-full w-full object-cover" />
+          <img src={mediaSrc} alt="" className="h-full w-full object-cover" />
           <span className="absolute bottom-2 left-2 z-10 inline-flex items-center gap-1 rounded-md bg-slate-900/55 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/95 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100">
             <ImageIcon size={10} />
             Image
           </span>
         </>
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-slate-100">
+          <ImageIcon size={28} className="text-slate-300" />
+        </div>
       )}
 
       {item.uploading ? (
@@ -171,7 +183,11 @@ function MediaCard({
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-white">
             {progress != null ? `${Math.round(progress)}%` : 'Uploading…'}
-            {item.uploadPhase === 'cloudinary' ? ' · Cloudinary' : ''}
+            {item.uploadPhase === 'compress'
+              ? ' · Optimizing'
+              : item.uploadPhase === 'cloudinary'
+                ? ' · Finishing'
+                : ''}
           </span>
         </div>
       ) : null}
@@ -210,7 +226,15 @@ function MediaCard({
   )
 }
 
-export default function ProductMediaManager({ image, images, video, videos, onChange, onError }) {
+export default function ProductMediaManager({
+  image,
+  images,
+  video,
+  videos,
+  onChange,
+  onError,
+  onUploadingChange,
+}) {
   const [items, setItems] = useState(() => buildItems(image, images, video, videos))
   const [dragIndex, setDragIndex] = useState(null)
   const [zoneActive, setZoneActive] = useState(false)
@@ -224,7 +248,9 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
     getCloudinaryStatus()
       .then((s) => {
         if (!cancelled) {
-          setCloudinaryReady(Boolean(s?.configured && s?.connected))
+          const ready = Boolean(s?.configured && s?.connected)
+          setCloudinaryReady(ready)
+          if (ready) prefetchVideoUploadSignature(STORE_IMAGE_FOLDERS.videos)
         }
       })
       .catch(() => {
@@ -239,28 +265,53 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
   const replaceRef = useRef(null)
   const replaceTargetRef = useRef(null)
 
-  const syncOut = useCallback(
-    (nextItems, { notifyParent = true } = {}) => {
-      setItems(nextItems)
+  const emitPayloadToParent = useCallback(
+    (nextItems) => {
       const pending = nextItems.some((i) => i.uploading || isLocalMediaUrl(i.url))
-      if (notifyParent && !pending) {
-        const payload = derivePayload(nextItems)
-        const hasStrayLocal = [payload.image, ...payload.images, payload.video, ...payload.videos].some(
-          (u) => u && isLocalMediaUrl(u),
-        )
-        if (!hasStrayLocal) onChange?.(payload)
-      }
+      if (pending) return false
+      const payload = derivePayload(nextItems)
+      const hasStrayLocal = [payload.image, ...payload.images, payload.video, ...payload.videos].some(
+        (u) => u && isLocalMediaUrl(u),
+      )
+      if (hasStrayLocal) return false
+      onChange?.(payload)
+      return true
     },
     [onChange],
   )
 
+  const scheduleNotifyParent = useCallback(
+    (nextItems) => {
+      if (emitPayloadToParent(nextItems)) return
+      queueMicrotask(() => emitPayloadToParent(nextItems))
+    },
+    [emitPayloadToParent],
+  )
+
+  const syncOut = useCallback(
+    (nextItems, { notifyParent = true } = {}) => {
+      setItems(nextItems)
+      if (notifyParent) scheduleNotifyParent(nextItems)
+    },
+    [scheduleNotifyParent],
+  )
+
+  const emitError = useCallback(
+    (msg) => {
+      queueMicrotask(() => onError?.(msg ?? ''))
+    },
+    [onError],
+  )
+
+  useEffect(() => {
+    const busy = uploading || items.some((i) => i.uploading)
+    onUploadingChange?.(busy)
+    if (!busy) emitPayloadToParent(items)
+  }, [uploading, items, onUploadingChange, emitPayloadToParent])
+
   const imageCount = useMemo(() => items.filter((i) => i.kind === 'image').length, [items])
   const videoCount = useMemo(() => items.filter((i) => i.kind === 'video').length, [items])
   const hasPrimary = useMemo(() => items.some((i) => i.kind === 'image' && i.isPrimary), [items])
-
-  const emitError = (msg) => {
-    if (msg) onError?.(msg)
-  }
 
   const processFiles = async (fileList, { replaceId } = {}) => {
     const raw = Array.from(fileList || [])
@@ -350,15 +401,19 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
         if (!url || (isVideoFile(file) && !isCloudinaryUrl(url)) || (!isVideoFile(file) && !isCloudinaryUrl(url))) {
           throw new Error('Upload did not complete on Cloudinary. Check backend .env and try again.')
         }
+        let nextItems = null
         setItems((prev) => {
-          const next = prev.map((i) =>
+          nextItems = prev.map((i) =>
             i.id === replaceId
               ? { ...i, url, uploading: false, uploadProgress: undefined }
               : i,
           )
-          onChange?.(derivePayload(next))
-          return next
+          return nextItems
         })
+        if (nextItems) {
+          emitPayloadToParent(nextItems)
+          if (url && isCloudinaryUrl(url)) onChange?.(derivePayload(nextItems))
+        }
         return
       }
 
@@ -425,7 +480,8 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
             onProgress: ({ fileIndex, percent, phase }) => {
               const targetId = videoTempIds[fileIndex]
               if (!targetId) return
-              setBatchProgress({ done: fileIndex + 1, total: videosToUpload.length, label: 'videos' })
+              const pct = Math.min(99, Math.max(0, Math.round(percent)))
+              setBatchProgress({ done: pct, total: 100, label: 'videos' })
               setItems((prev) =>
                 prev.map((i) =>
                   i.id === targetId
@@ -459,6 +515,7 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
         }
       }
 
+      let nextItems = null
       setItems((prev) => {
         let imgIdx = 0
         let vidIdx = 0
@@ -489,23 +546,36 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
           })
           .filter(Boolean)
 
-        const withPrimary = next.some((x) => x.kind === 'image' && x.isPrimary)
+        nextItems = next.some((x) => x.kind === 'image' && x.isPrimary)
           ? next
           : next.map((x) =>
               x.kind === 'image'
                 ? { ...x, isPrimary: x.id === next.find((y) => y.kind === 'image')?.id }
                 : x,
             )
-        onChange?.(derivePayload(withPrimary))
-        return withPrimary
+        return nextItems
       })
+      if (nextItems) {
+        emitPayloadToParent(nextItems)
+        if (uploaded.length || uploadedVideos.length) {
+          const cloudImages = uploaded.filter((u) => isCloudinaryUrl(u))
+          const cloudVideos = uploadedVideos.filter((u) => isCloudinaryUrl(u))
+          onChange?.({
+            image: cloudImages[0] || '',
+            images: cloudImages.slice(1),
+            video: cloudVideos[0] || '',
+            videos: cloudVideos,
+          })
+        }
+      }
     } catch (err) {
       emitError(err?.message || 'Upload failed.')
+      let cleaned = null
       setItems((prev) => {
-        const cleaned = prev.filter((i) => !tempIds.includes(i.id))
-        onChange?.(derivePayload(cleaned))
+        cleaned = prev.filter((i) => !tempIds.includes(i.id))
         return cleaned
       })
+      if (cleaned) scheduleNotifyParent(cleaned)
     } finally {
       setUploading(false)
       setBatchProgress(null)
@@ -601,6 +671,7 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
         onDragOver={(e) => {
           e.preventDefault()
           setZoneActive(true)
+          if (cloudinaryReady) prefetchVideoUploadSignature(STORE_IMAGE_FOLDERS.videos)
         }}
         onDragLeave={() => setZoneActive(false)}
         onDrop={handleZoneDrop}
@@ -645,8 +716,8 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
             Drop media here or click to upload
           </p>
           <p className="mt-2 max-w-md text-xs font-semibold leading-relaxed text-slate-500">
-            JPG, PNG, WEBP · MP4, MOV, WEBM · Images are compressed before upload · Video max{' '}
-            {formatMegabytes(MAX_VIDEO_FILE_BYTES)}
+            JPG, PNG, WEBP · MP4, MOV, WEBM · Large videos are optimized before upload · Max{' '}
+            {formatMegabytes(MAX_VIDEO_FILE_BYTES)} · 4K/large files are scaled to 720p before upload
           </p>
           {!hasPrimary && imageCount > 0 ? (
             <p className="mt-2 text-xs font-bold text-amber-600">Set a primary image for the listing.</p>
@@ -658,7 +729,9 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
             <div className="mb-1 flex justify-between text-[11px] font-bold text-slate-600">
               <span>
                 {batchProgress?.label === 'videos' || batchProgress?.label === 'video'
-                  ? `Uploading video${batchProgress?.total > 1 ? 's' : ''}…`
+                  ? batchProgress?.done < 40
+                    ? 'Optimizing video…'
+                    : `Uploading video${batchProgress?.total > 1 ? 's' : ''}…`
                   : batchProgress
                     ? `Uploading ${batchProgress.label} (${batchProgress.done}/${batchProgress.total})`
                     : 'Uploading…'}
@@ -750,7 +823,7 @@ export default function ProductMediaManager({ image, images, video, videos, onCh
               >
                 <X size={18} />
               </button>
-              <video src={videoModal.url} controls autoPlay className="max-h-[70vh] w-full rounded-xl" />
+              <video src={videoModal.url || undefined} controls autoPlay className="max-h-[70vh] w-full rounded-xl" />
             </motion.div>
           </motion.div>
         ) : null}

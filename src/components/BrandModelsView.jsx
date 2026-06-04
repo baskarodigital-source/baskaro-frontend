@@ -41,17 +41,34 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
     }
   };
 
-  const handleEdit = (model) => {
-     setEditingModel(model);
-     setActiveTab('Add');
-  };
+  const handleEdit = async (model) => {
+    const rawId = String(model?._id || model?.id || '').trim()
+    try {
+      if (rawId) {
+        const full = await api.getMobileModel(rawId)
+        setEditingModel(full || model)
+      } else {
+        setEditingModel(model)
+      }
+    } catch (err) {
+      console.error('Failed to load model for edit:', err)
+      setEditingModel(model)
+    }
+    setActiveTab('Add')
+  }
 
   const handleSave = async (data) => {
     try {
       const { offersDraft, ...modelBody } = data || {}
       if (editingModel) {
-        const modelId = editingModel.id || editingModel._id
+        const modelId = String(editingModel._id || editingModel.id || '').trim()
+        if (!modelId) throw new Error('Cannot update: model id is missing.')
+        if (!modelBody?.modelName) throw new Error('Model name is required.')
+        if (!modelBody?.brandId) throw new Error('Brand is required.')
         const updated = await api.patchMobileModel(modelId, modelBody)
+        if (!updated?._id && !updated?.id) {
+          throw new Error('Update API did not return the saved product.')
+        }
         const id = updated?._id || updated?.id || modelId
 
         if (Array.isArray(offersDraft)) {
@@ -92,11 +109,11 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
           )
         }
       }
-      loadModels();
+      await loadModels();
       setActiveTab('Models');
       setEditingModel(null);
     } catch (err) {
-      alert(err.message || 'Save failed');
+      throw new Error(err?.message || 'Save failed');
     }
   };
 
@@ -118,8 +135,9 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
        </div>
 
        {activeTab === 'Add' ? (
-          <AddNewModelForm 
-            onCancel={() => { setActiveTab('Models'); setEditingModel(null); }} 
+          <AddNewModelForm
+            key={editingModel?._id || editingModel?.id || 'new-model'}
+            onCancel={() => { setActiveTab('Models'); setEditingModel(null); }}
             category={category}
             brand={brand}
             device={device}
@@ -161,7 +179,7 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
                                      <img src={getModelPreviewImage(model)} alt={model.name} className="h-full w-full object-contain" />
                                   </div>
                                   <div>
-                                     <span className="block text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{model.name}</span>
+                                     <span className="block text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{model.modelName || model.name}</span>
                                      <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Product ID: BSK-MDL-{String(model.id || model._id).slice(-6).toUpperCase()}</span>
                                   </div>
                                </div>

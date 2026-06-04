@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle } from 'lucide-react'
+import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle, Play, Film } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 import { getMobileModel, getOffers } from '../lib/api/baskaroApi.js'
+import { buildModelMediaGallery } from '../lib/productMedia.js'
 
 const CONDITION_GRADES = [
    { id: 'Fair', label: 'Fair', desc: 'Noticeable signs of use' },
@@ -51,7 +52,7 @@ export default function ProductDetailsPage() {
    const [loadErr, setLoadErr] = useState('')
    const [loading, setLoading] = useState(true)
    const [offers, setOffers] = useState([])
-   const [selectedImg, setSelectedImg] = useState(0)
+   const [selectedMedia, setSelectedMedia] = useState(0)
    const [condition, setCondition] = useState('Superb')
    const [extendedWarranty, setExtendedWarranty] = useState(false)
    const [showAllSpecs, setShowAllSpecs] = useState(false)
@@ -89,7 +90,7 @@ export default function ProductDetailsPage() {
       if (!model) return null
       const brandName = model.brandId?.name || '—'
       const v0 = model.storageVariants?.[0]
-      const images = model.image ? [model.image] : ['/logo.png']
+      const { media, images, videos } = buildModelMediaGallery(model)
       const price = Number(model.basePrice) || 0
       return {
          title: `${brandName} ${model.modelName} - Pre-Owned`,
@@ -105,10 +106,16 @@ export default function ProductDetailsPage() {
          discount: 0,
          emi: price > 0 ? Math.max(1, Math.round(price / 24)) : 0,
          images,
+         videos,
+         media,
          conditionGrades: CONDITION_GRADES,
          specGroups: specGroupsFromModel(model),
       }
    }, [model])
+
+   useEffect(() => {
+      setSelectedMedia(0)
+   }, [id, product?.media?.length])
 
    if (loading) {
       return (
@@ -137,7 +144,8 @@ export default function ProductDetailsPage() {
       setTimeout(() => setIsAdding(false), 1500)
    }
 
-   const showThumbScroll = product.images?.length > 5
+   const activeItem = product.media?.[selectedMedia] || product.media?.[0]
+   const showThumbScroll = (product.media?.length || 0) > 5
 
    const formatPrice = (p) => new Intl.NumberFormat('en-IN').format(p)
 
@@ -169,14 +177,25 @@ export default function ProductDetailsPage() {
                               showThumbScroll ? 'md:overflow-y-auto md:max-h-[280px] md:pr-1' : 'md:overflow-visible'
                            ].join(' ')}
                         >
-                           {product.images.map((img, i) => (
+                           {product.media.map((item, i) => (
                               <button
-                                 key={i}
-                                 onClick={() => setSelectedImg(i)}
-                                 className={`h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all p-0.5 ${selectedImg === i ? 'border-red-600 shadow-sm' : 'border-slate-100'
+                                 key={`${item.type}-${item.url}`}
+                                 type="button"
+                                 onClick={() => setSelectedMedia(i)}
+                                 className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all p-0.5 ${selectedMedia === i ? 'border-red-600 shadow-sm' : 'border-slate-100'
                                     }`}
+                                 aria-label={item.type === 'video' ? 'View product video' : 'View product image'}
                               >
-                                 <img src={img} alt="" className="h-full w-full object-contain" />
+                                 <img
+                                   src={item.type === 'video' ? item.poster || product.images[0] : item.url}
+                                   alt=""
+                                   className="h-full w-full object-cover"
+                                 />
+                                 {item.type === 'video' ? (
+                                   <span className="absolute inset-0 flex items-center justify-center bg-slate-900/35">
+                                     <Play size={14} className="text-white" fill="currentColor" />
+                                   </span>
+                                 ) : null}
                               </button>
                            ))}
                         </div>
@@ -219,17 +238,43 @@ export default function ProductDetailsPage() {
                         {/* Image sits in the upper part of the aspect box; no flex-1 gap above CTAs */}
                         <div className="relative flex min-h-0 flex-1 items-center justify-center p-2 pb-4">
                            <AnimatePresence mode="wait">
-                              <motion.img
-                                 key={selectedImg}
-                                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                 transition={{ type: "spring", damping: 20, stiffness: 100 }}
-                                 src={product.images[selectedImg]}
-                                 alt={product.title}
-                                 className="h-full w-full max-h-full object-contain mix-blend-multiply drop-shadow-2xl"
-                              />
+                              {activeItem?.type === 'video' ? (
+                                <motion.div
+                                  key={`video-${activeItem.url}`}
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                                  className="h-full w-full flex items-center justify-center"
+                                >
+                                  <video
+                                    src={activeItem.url}
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                    poster={activeItem.poster || undefined}
+                                    className="max-h-full w-full rounded-xl bg-black object-contain shadow-2xl"
+                                  />
+                                </motion.div>
+                              ) : (
+                                <motion.img
+                                  key={`img-${activeItem?.url || selectedMedia}`}
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                                  src={activeItem?.url || product.images[0]}
+                                  alt={product.title}
+                                  className="h-full w-full max-h-full object-contain mix-blend-multiply drop-shadow-2xl"
+                                />
+                              )}
                            </AnimatePresence>
+                           {product.videos?.length > 0 ? (
+                             <span className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-slate-900/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+                               <Film size={12} />
+                               {product.videos.length} video{product.videos.length === 1 ? '' : 's'}
+                             </span>
+                           ) : null}
                         </div>
 
                         <div className="grid shrink-0 grid-cols-2 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">

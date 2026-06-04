@@ -267,7 +267,8 @@ export async function postMobileModel(body) {
 }
 
 export async function patchMobileModel(modelId, body) {
-  return unwrap(await apiRequest(`/api/mobile/models/${modelId}`, { method: 'PATCH', body, auth: true }))
+  const id = encodeURIComponent(String(modelId || '').trim())
+  return unwrap(await apiRequest(`/api/mobile/models/${id}`, { method: 'PATCH', body, auth: true }))
 }
 
 export async function deleteMobileModel(modelId) {

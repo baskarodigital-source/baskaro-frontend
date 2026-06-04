@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
 import ProductMediaManager from './ProductMediaManager.jsx'
@@ -27,6 +27,18 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [formError, setFormError] = useState('')
+  const [mediaUploading, setMediaUploading] = useState(false)
+  const mediaPayloadRef = useRef({
+    image: editingModel?.image || editingModel?.imageUrl || '',
+    images: Array.isArray(editingModel?.images) ? editingModel.images.filter(Boolean) : [],
+    video: editingModel?.video || editingModel?.videoUrl || '',
+    videos:
+      Array.isArray(editingModel?.videoUrls) && editingModel.videoUrls.length
+        ? editingModel.videoUrls.filter(Boolean)
+        : editingModel?.video || editingModel?.videoUrl
+          ? [editingModel.video || editingModel.videoUrl]
+          : [],
+  })
 
   const [formData, setFormData] = useState(() => ({
     categoryId: category?.id || editingModel?.categoryId || '',
@@ -37,7 +49,6 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
   }))
 
   useEffect(() => {
-    // Flow requirement: category/brand come from navigation (Category → Brand → Model).
     setFormData((p) => ({
       ...p,
       categoryId: category?.id || p.categoryId,
@@ -45,6 +56,48 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       deviceId: device?.id || p.deviceId,
     }))
   }, [category?.id, brand?.id, device?.id])
+
+  useEffect(() => {
+    if (!editingModel) return
+    const modelId = editingModel._id || editingModel.id
+    setFormData({
+      categoryId: category?.id || editingModel?.categoryId || '',
+      brandId: String(brand?.id || editingModel.brandId?._id || editingModel.brandId || ''),
+      deviceId: String(device?.id || editingModel.deviceId?._id || editingModel.deviceId || ''),
+      modelName: editingModel.modelName || editingModel.name || '',
+      basePrice: editingModel.basePrice ?? '',
+    })
+    setImagePreview((prev) => {
+      if (prev && isCloudinaryUrl(prev)) return prev
+      return editingModel.image || editingModel.imageUrl || null
+    })
+    setGalleryImages((prev) => {
+      const fromServer = Array.isArray(editingModel.images) ? editingModel.images.filter(Boolean) : []
+      if (prev?.length && prev.some(isCloudinaryUrl)) return prev
+      return fromServer
+    })
+    const vids =
+      Array.isArray(editingModel.videoUrls) && editingModel.videoUrls.length
+        ? editingModel.videoUrls.filter(Boolean)
+        : editingModel.video || editingModel.videoUrl
+          ? [editingModel.video || editingModel.videoUrl]
+          : []
+    setVideoUrls((prev) => {
+      if (prev?.length && prev.some(isCloudinaryUrl)) return prev
+      return vids
+    })
+    mediaPayloadRef.current = {
+      image: editingModel.image || editingModel.imageUrl || mediaPayloadRef.current.image || '',
+      images: Array.isArray(editingModel.images)
+        ? editingModel.images.filter(Boolean)
+        : mediaPayloadRef.current.images || [],
+      video: vids[0] || mediaPayloadRef.current.video || '',
+      videos: vids.length ? vids : mediaPayloadRef.current.videos || [],
+    }
+    if (editingModel.specifications && typeof editingModel.specifications === 'object') {
+      setSpecValues({ ...editingModel.specifications })
+    }
+  }, [editingModel?._id, editingModel?.id, category?.id, brand?.id, device?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -147,36 +200,60 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       if (empty) return setFormError('Please fill all required specifications.')
     }
 
-    const mediaUrls = [imagePreview, ...(galleryImages || []), ...(videoUrls || [])].filter(Boolean)
+    if (mediaUploading) {
+      return setFormError('Media is still uploading. Wait until uploads finish, then save.')
+    }
+
+    const latestMedia = mediaPayloadRef.current
+    const primaryImage = String(latestMedia.image || imagePreview || '').trim()
+    const gallery = Array.isArray(latestMedia.images) ? latestMedia.images : galleryImages
+    const videos = Array.isArray(latestMedia.videos)?.length
+      ? latestMedia.videos
+      : latestMedia.video
+        ? [latestMedia.video]
+        : videoUrls
+
+    const mediaUrls = [primaryImage, ...(gallery || []), ...(videos || [])].filter(Boolean)
     if (mediaUrls.some(isLocalMediaUrl)) {
       return setFormError('Media is still uploading locally. Wait until uploads finish (Cloudinary URLs).')
     }
-    if (imagePreview && !isCloudinaryUrl(imagePreview)) {
+
+    if (!editingModel && !primaryImage) {
+      return setFormError('Add at least one product image (primary) before publishing.')
+    }
+    if (primaryImage && !isCloudinaryUrl(primaryImage)) {
       return setFormError('Primary image must be uploaded to Cloudinary before saving.')
     }
-    if ((videoUrls || []).some((v) => v && !isCloudinaryUrl(v))) {
+    if ((videos || []).some((v) => v && !isCloudinaryUrl(v))) {
       return setFormError('All videos must be uploaded to Cloudinary before saving.')
     }
 
+    const modelBody = {
+      brandId: formData.brandId,
+      deviceId: formData.deviceId,
+      modelName,
+      basePrice,
+      specifications: specValues,
+    }
+
+    if (primaryImage) modelBody.image = primaryImage
+    if (Array.isArray(gallery) && gallery.length) modelBody.images = gallery
+    if (videos?.length) {
+      modelBody.videoUrls = videos
+      modelBody.videoUrl = videos[0]
+    }
+
     setSaving(true)
-    Promise.resolve(
-      onSave({
-        brandId: formData.brandId,
-        deviceId: formData.deviceId,
-        modelName,
-        basePrice,
-        image: imagePreview || '',
-        images: galleryImages,
-        videoUrl: videoUrls[0] || '',
-        videoUrls,
-        specifications: specValues,
-        offersDraft,
-      }),
-    )
+    onSave({
+      ...modelBody,
+      offersDraft,
+    })
       .then(() => {
         setSuccessMsg(editingModel ? 'Model updated successfully.' : 'Model created successfully.')
+        setFormError('')
       })
       .catch((err) => {
+        setSuccessMsg('')
         setFormError(err?.message || 'Failed to save model')
       })
       .finally(() => setSaving(false))
@@ -185,8 +262,14 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
        <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:px-8 sm:py-6">
-          <h3 className="text-base font-black text-slate-900 sm:text-lg">Create New Product Listing</h3>
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">Fill in the specifications to list a new item on the marketplace.</p>
+          <h3 className="text-base font-black text-slate-900 sm:text-lg">
+            {editingModel ? 'Edit Product Listing' : 'Create New Product Listing'}
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+            {editingModel
+              ? 'Update details below, then click Update Product Details.'
+              : 'Fill in the specifications to list a new item on the marketplace.'}
+          </p>
        </div>
 
        <div className="space-y-8 p-4 sm:gap-10 sm:p-6 lg:p-8">
@@ -197,12 +280,19 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
             video={videoUrls[0] || ''}
             videos={videoUrls}
             onChange={({ image, images, video, videos }) => {
-              setImagePreview(image || null)
-              setGalleryImages(Array.isArray(images) ? images : [])
               const nextVideos =
                 Array.isArray(videos) && videos.length ? videos : video ? [video] : []
+              mediaPayloadRef.current = {
+                image: image || '',
+                images: Array.isArray(images) ? images : [],
+                video: nextVideos[0] || '',
+                videos: nextVideos,
+              }
+              setImagePreview(image || null)
+              setGalleryImages(Array.isArray(images) ? images : [])
               setVideoUrls(nextVideos)
             }}
+            onUploadingChange={setMediaUploading}
             onError={setFormError}
           />
 

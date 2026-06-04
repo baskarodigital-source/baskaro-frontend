@@ -1,5 +1,13 @@
 import { apiRequest } from './api/client.js'
 import { getToken } from './auth.js'
+import {
+  compressVideoForUpload,
+  getCachedVideoUploadSignature,
+  isNetworkVideoUploadError,
+  prefetchVideoUploadSignature,
+} from './videoUploadPrep.js'
+
+export { prefetchVideoUploadSignature }
 
 /** Must match backend `cloudinaryFolders.js` */
 export const STORE_IMAGE_FOLDERS = {
@@ -47,6 +55,19 @@ export function formatMegabytes(bytes) {
 }
 
 const apiBase = () => (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
+/** Normalize multipart upload JSON ({ url } or { success, data: { url } }). */
+function parseUploadResponseUrl(data) {
+  if (!data || typeof data !== 'object') return null
+  if (typeof data.url === 'string' && data.url.trim()) return data.url.trim()
+  if (typeof data.secure_url === 'string' && data.secure_url.trim()) return data.secure_url.trim()
+  const nested = data.data
+  if (nested && typeof nested === 'object') {
+    if (typeof nested.url === 'string' && nested.url.trim()) return nested.url.trim()
+    if (typeof nested.secure_url === 'string' && nested.secure_url.trim()) return nested.secure_url.trim()
+  }
+  return null
+}
 
 /** Video uploads hit the API directly — Vite proxy often times out during Cloudinary processing. */
 function multipartUploadUrl(path) {
@@ -124,21 +145,33 @@ export function uploadStoreFileMultipart(path, file, { folder, onProgress, timeo
       if (xhr.status >= 200 && xhr.status < 300) {
         report(100, 'done')
         if (data?.error) reject(new Error(data.error))
-        else if (!data?.url) reject(new Error('Upload did not return a URL'))
-        else resolve(data.url)
+        const uploadedUrl = parseUploadResponseUrl(data)
+        if (!uploadedUrl) {
+          reject(new Error('Upload did not return a URL'))
+          return
+        }
+        resolve(uploadedUrl)
         return
       }
       let msg = data?.error || data?.message || xhr.statusText || 'Upload failed'
-      if (xhr.status === 408 || /request timeout/i.test(msg)) {
+      if (xhr.status === 413 || /entity too large|payload too large/i.test(msg)) {
+        msg = `Video is too large for the server (max ${formatMegabytes(MAX_VIDEO_FILE_BYTES)}). Compress the file or ask ops to raise nginx client_max_body_size on api.baskaro.com.`
+      } else if (xhr.status === 408 || /request timeout/i.test(msg)) {
         msg =
-          'Upload timed out while sending to Cloudinary. Restart the API server, set VITE_API_URL=http://localhost:4001 in the frontend .env, or use a smaller video.'
+          'Upload timed out while sending to Cloudinary. Try a smaller video or check your connection.'
       }
       reject(new Error(msg))
     }
 
     xhr.onerror = () => {
       clearTimeout(timer)
-      reject(new Error('Network error during upload. Is the API server running?'))
+      reject(
+        new Error(
+          isVideo
+            ? 'Video upload failed (network or server limit). Large videos upload directly to Cloudinary when possible — retry, or use a file under 50MB.'
+            : 'Network error during upload. Is the API server running?',
+        ),
+      )
     }
     xhr.onabort = () => {
       clearTimeout(timer)
@@ -352,7 +385,136 @@ export async function uploadStoreVideoFile(file, { folder = STORE_IMAGE_FOLDERS.
       `Video is too large (${formatMegabytes(file.size)}). Maximum size is ${formatMegabytes(MAX_VIDEO_FILE_BYTES)}.`,
     )
   }
-  return uploadStoreFileMultipart('/api/uploads/video/file', file, { folder, onProgress })
+
+  const prepared = await compressVideoForUpload(file, { onProgress })
+  if (prepared.size > MAX_VIDEO_FILE_BYTES) {
+    throw new Error(
+      `Video is too large (${formatMegabytes(prepared.size)}). Maximum is ${formatMegabytes(MAX_VIDEO_FILE_BYTES)}.`,
+    )
+  }
+
+  const mapProgress = (pct, phase) => {
+    if (phase === 'compress') onProgress?.(pct, phase)
+    else onProgress?.(40 + (pct / 100) * 60, phase)
+  }
+
+  try {
+    return await uploadStoreVideoFileDirect(prepared, { folder, onProgress: mapProgress })
+  } catch (directErr) {
+    if (!isNetworkVideoUploadError(directErr)) throw directErr
+    const maxApiRelayBytes = 12 * 1024 * 1024
+    if (prepared.size > maxApiRelayBytes) {
+      throw new Error(
+        `Video upload failed (${formatMegabytes(prepared.size)}). Large files must upload directly to Cloudinary — refresh the page, disable ad blockers, and try again.`,
+      )
+    }
+    onProgress?.(42, 'api')
+    return uploadStoreFileMultipart('/api/uploads/video/file', prepared, {
+      folder,
+      onProgress: (pct, phase) => mapProgress(pct, phase === 'cloudinary' ? 'cloudinary' : 'send'),
+    })
+  }
+}
+
+/**
+ * Browser → Cloudinary direct upload (signed). Avoids sending large files through api.baskaro.com / nginx.
+ */
+export function uploadStoreVideoFileDirect(file, { folder = STORE_IMAGE_FOLDERS.videos, onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    const report = (pct, phase) => {
+      onProgress?.(Math.min(99, Math.max(0, Math.round(pct))), phase)
+    }
+
+    const maxMs = 15 * 60 * 1000
+    let xhr = null
+    const timer = setTimeout(() => {
+      xhr?.abort()
+      reject(new Error('Video upload timed out. Try a shorter clip or compress the file.'))
+    }, maxMs)
+
+    ;(async () => {
+      let sig = getCachedVideoUploadSignature(folder)
+      try {
+        if (!sig) {
+          sig = await apiRequest('/api/uploads/video/signature', {
+            method: 'POST',
+            body: { folder },
+            auth: true,
+          })
+        }
+      } catch (err) {
+        clearTimeout(timer)
+        reject(err)
+        return
+      }
+
+      if (sig?.error) {
+        clearTimeout(timer)
+        reject(new Error(sig.error))
+        return
+      }
+
+      const uploadUrl =
+        sig.uploadUrl ||
+        `https://api.cloudinary.com/v1_1/${sig.cloudName}/video/upload`
+
+      xhr = new XMLHttpRequest()
+      const form = new FormData()
+      form.append('file', file, file.name || 'video')
+      form.append('api_key', sig.apiKey)
+      form.append('timestamp', String(sig.timestamp))
+      form.append('signature', sig.signature)
+      form.append('folder', sig.folder)
+
+      xhr.open('POST', uploadUrl)
+
+      xhr.upload.onloadstart = () => report(42, 'send')
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) {
+          report(42 + (e.loaded / e.total) * 52, 'send')
+        } else if (e.loaded > 0) {
+          report(Math.min(94, 48 + Math.round(e.loaded / 400000)), 'send')
+        }
+      }
+
+      xhr.upload.onload = () => report(96, 'cloudinary')
+
+      xhr.onload = () => {
+        clearTimeout(timer)
+        let data = null
+        try {
+          data = xhr.responseText ? JSON.parse(xhr.responseText) : null
+        } catch {
+          data = { raw: xhr.responseText }
+        }
+        if (xhr.status >= 200 && xhr.status < 300 && data?.secure_url) {
+          report(100, 'done')
+          resolve(data.secure_url)
+          return
+        }
+        const msg =
+          data?.error?.message ||
+          data?.error ||
+          data?.message ||
+          xhr.statusText ||
+          'Cloudinary video upload failed'
+        reject(new Error(typeof msg === 'string' ? msg : 'Cloudinary video upload failed'))
+      }
+
+      xhr.onerror = () => {
+        clearTimeout(timer)
+        reject(new Error('Video upload to Cloudinary failed. Check your connection and try again.'))
+      }
+
+      xhr.onabort = () => {
+        clearTimeout(timer)
+        reject(new Error('Upload cancelled'))
+      }
+
+      xhr.send(form)
+    })()
+  })
 }
 
 /** Upload multiple video files (limited concurrency — each file is large). */
