@@ -15,6 +15,7 @@ import {
   STORE_IMAGE_FOLDERS,
   uploadStoreImageFiles,
   uploadStoreVideoFile,
+  uploadStoreVideoFiles,
   MAX_VIDEO_FILE_BYTES,
   formatMegabytes,
   getCloudinaryStatus,
@@ -31,7 +32,21 @@ function uid() {
   return `media-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function buildItems(image, images, video) {
+function collectVideoUrls(video, videos) {
+  const list = []
+  const seen = new Set()
+  const push = (raw) => {
+    const u = String(raw || '').trim()
+    if (!u || seen.has(u)) return
+    seen.add(u)
+    list.push(u)
+  }
+  if (Array.isArray(videos)) videos.forEach(push)
+  push(video)
+  return list
+}
+
+function buildItems(image, images, video, videos) {
   const items = []
   const gallery = Array.isArray(images) ? images.filter(Boolean) : []
   const primaryUrl = String(image || '').trim()
@@ -46,8 +61,7 @@ function buildItems(image, images, video) {
     items.push({ id: `img-${u}`, url: u, kind: 'image', isPrimary: false })
   }
 
-  const videoUrl = String(video || '').trim()
-  if (videoUrl) {
+  for (const videoUrl of collectVideoUrls(video, videos)) {
     items.push({ id: `vid-${videoUrl}`, url: videoUrl, kind: 'video' })
   }
 
@@ -59,8 +73,10 @@ function derivePayload(items) {
   const primary = images.find((i) => i.isPrimary) || images[0]
   const image = primary?.url || ''
   const gallery = images.filter((i) => i.url && i.url !== image).map((i) => i.url)
-  const videoItem = items.find((i) => i.kind === 'video' && isCloudinaryUrl(i.url))
-  return { image, images: gallery, video: videoItem?.url || '' }
+  const videos = items
+    .filter((i) => i.kind === 'video' && isCloudinaryUrl(i.url))
+    .map((i) => i.url)
+  return { image, images: gallery, video: videos[0] || '', videos }
 }
 
 function MediaCard({
@@ -194,8 +210,8 @@ function MediaCard({
   )
 }
 
-export default function ProductMediaManager({ image, images, video, onChange, onError }) {
-  const [items, setItems] = useState(() => buildItems(image, images, video))
+export default function ProductMediaManager({ image, images, video, videos, onChange, onError }) {
+  const [items, setItems] = useState(() => buildItems(image, images, video, videos))
   const [dragIndex, setDragIndex] = useState(null)
   const [zoneActive, setZoneActive] = useState(false)
   const [batchProgress, setBatchProgress] = useState(null)
@@ -229,7 +245,7 @@ export default function ProductMediaManager({ image, images, video, onChange, on
       const pending = nextItems.some((i) => i.uploading || isLocalMediaUrl(i.url))
       if (notifyParent && !pending) {
         const payload = derivePayload(nextItems)
-        const hasStrayLocal = [payload.image, ...payload.images, payload.video].some(
+        const hasStrayLocal = [payload.image, ...payload.images, payload.video, ...payload.videos].some(
           (u) => u && isLocalMediaUrl(u),
         )
         if (!hasStrayLocal) onChange?.(payload)
@@ -239,6 +255,7 @@ export default function ProductMediaManager({ image, images, video, onChange, on
   )
 
   const imageCount = useMemo(() => items.filter((i) => i.kind === 'image').length, [items])
+  const videoCount = useMemo(() => items.filter((i) => i.kind === 'video').length, [items])
   const hasPrimary = useMemo(() => items.some((i) => i.kind === 'image' && i.isPrimary), [items])
 
   const emitError = (msg) => {
@@ -257,19 +274,7 @@ export default function ProductMediaManager({ image, images, video, onChange, on
     }
     if (rejected) emitError('Some files were skipped — only JPG, PNG, WEBP, MP4, MOV, and WEBM are allowed.')
 
-    const existingVideo = items.some((i) => i.kind === 'video')
-    const videosToUpload = replaceId
-      ? videoFiles.slice(0, 1)
-      : existingVideo && !replaceId
-        ? []
-        : videoFiles.slice(0, 1)
-
-    if (videoFiles.length > 1 && !replaceId) {
-      emitError('Only one product video is kept — using the first video file.')
-    }
-    if (existingVideo && videoFiles.length && !replaceId) {
-      emitError('Remove the current video before adding another, or use Replace on the video card.')
-    }
+    const videosToUpload = replaceId ? videoFiles.slice(0, 1) : videoFiles
 
     for (const vf of videosToUpload) {
       if (vf.size > MAX_VIDEO_FILE_BYTES) {
@@ -411,19 +416,33 @@ export default function ProductMediaManager({ image, images, video, onChange, on
           })
         : Promise.resolve([])
 
+      const videoTempIds = tempItems.filter((t) => t.kind === 'video').map((t) => t.id)
+
       const videoUploadPromise = videosToUpload.length
-        ? uploadStoreVideoFile(videosToUpload[0], {
+        ? uploadStoreVideoFiles(videosToUpload, {
             folder: STORE_IMAGE_FOLDERS.videos,
-            onProgress: (pct, phase) => bumpVideoProgress(pct, phase),
+            concurrency: 2,
+            onProgress: ({ fileIndex, percent, phase }) => {
+              const targetId = videoTempIds[fileIndex]
+              if (!targetId) return
+              setBatchProgress({ done: fileIndex + 1, total: videosToUpload.length, label: 'videos' })
+              setItems((prev) =>
+                prev.map((i) =>
+                  i.id === targetId
+                    ? { ...i, uploadProgress: percent, uploadPhase: phase || 'send' }
+                    : i,
+                ),
+              )
+            },
           })
-        : Promise.resolve(null)
+        : Promise.resolve([])
 
       if (imageFiles.length) setBatchProgress({ done: 0, total: imageFiles.length, label: 'images' })
       if (videosToUpload.length && !imageFiles.length) {
-        setBatchProgress({ done: 0, total: 100, label: 'video' })
+        setBatchProgress({ done: 0, total: videosToUpload.length, label: 'videos' })
       }
 
-      const [uploaded, cloudinaryVideoUrl] = await Promise.all([
+      const [uploaded, uploadedVideos] = await Promise.all([
         imageUploadPromise,
         videoUploadPromise,
       ])
@@ -431,12 +450,18 @@ export default function ProductMediaManager({ image, images, video, onChange, on
       if (imageFiles.length && uploaded.length !== imageFiles.length) {
         throw new Error('One or more images failed to upload to Cloudinary.')
       }
-      if (videosToUpload.length && (!cloudinaryVideoUrl || !isCloudinaryUrl(cloudinaryVideoUrl))) {
-        throw new Error('Video upload did not return a Cloudinary URL.')
+      if (videosToUpload.length) {
+        if (uploadedVideos.length !== videosToUpload.length) {
+          throw new Error('One or more videos failed to upload to Cloudinary.')
+        }
+        if (uploadedVideos.some((u) => !u || !isCloudinaryUrl(u))) {
+          throw new Error('Video upload did not return a Cloudinary URL.')
+        }
       }
 
       setItems((prev) => {
         let imgIdx = 0
+        let vidIdx = 0
         const next = prev
           .map((i) => {
             if (!tempIds.includes(i.id)) return i
@@ -448,11 +473,13 @@ export default function ProductMediaManager({ image, images, video, onChange, on
               return { ...i, url, uploading: false, uploadProgress: undefined }
             }
             if (i.kind === 'video') {
+              const url = uploadedVideos[vidIdx]
+              vidIdx += 1
               if (i.url?.startsWith('blob:')) URL.revokeObjectURL(i.url)
-              if (!cloudinaryVideoUrl) return null
+              if (!url || !isCloudinaryUrl(url)) return null
               return {
                 ...i,
-                url: cloudinaryVideoUrl,
+                url,
                 uploading: false,
                 uploadProgress: undefined,
                 uploadPhase: undefined,
@@ -557,8 +584,10 @@ export default function ProductMediaManager({ image, images, video, onChange, on
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
             {imageCount} photo{imageCount === 1 ? '' : 's'}
           </span>
-          {items.some((i) => i.kind === 'video') ? (
-            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-600">1 video</span>
+          {videoCount > 0 ? (
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-600">
+              {videoCount} video{videoCount === 1 ? '' : 's'}
+            </span>
           ) : null}
         </div>
       </div>
@@ -628,8 +657,8 @@ export default function ProductMediaManager({ image, images, video, onChange, on
           <div className="absolute inset-x-0 bottom-0 border-t border-white/50 bg-white/75 px-4 py-3 backdrop-blur-md">
             <div className="mb-1 flex justify-between text-[11px] font-bold text-slate-600">
               <span>
-                {batchProgress?.label === 'video'
-                  ? 'Uploading video…'
+                {batchProgress?.label === 'videos' || batchProgress?.label === 'video'
+                  ? `Uploading video${batchProgress?.total > 1 ? 's' : ''}…`
                   : batchProgress
                     ? `Uploading ${batchProgress.label} (${batchProgress.done}/${batchProgress.total})`
                     : 'Uploading…'}

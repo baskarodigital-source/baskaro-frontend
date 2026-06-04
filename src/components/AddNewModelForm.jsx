@@ -9,7 +9,13 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
   const [galleryImages, setGalleryImages] = useState(() =>
     Array.isArray(editingModel?.images) ? editingModel.images.filter(Boolean) : [],
   )
-  const [videoPreview, setVideoPreview] = useState(editingModel?.video || editingModel?.videoUrl || '')
+  const [videoUrls, setVideoUrls] = useState(() => {
+    if (Array.isArray(editingModel?.videoUrls) && editingModel.videoUrls.length) {
+      return editingModel.videoUrls.filter(Boolean)
+    }
+    const single = editingModel?.video || editingModel?.videoUrl || ''
+    return single ? [single] : []
+  })
   const [specs, setSpecs] = useState([])
   const [specValues, setSpecValues] = useState(() => (editingModel?.specifications && typeof editingModel.specifications === 'object'
     ? { ...editingModel.specifications }
@@ -141,15 +147,15 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       if (empty) return setFormError('Please fill all required specifications.')
     }
 
-    const mediaUrls = [imagePreview, ...(galleryImages || []), videoPreview].filter(Boolean)
+    const mediaUrls = [imagePreview, ...(galleryImages || []), ...(videoUrls || [])].filter(Boolean)
     if (mediaUrls.some(isLocalMediaUrl)) {
       return setFormError('Media is still uploading locally. Wait until uploads finish (Cloudinary URLs).')
     }
     if (imagePreview && !isCloudinaryUrl(imagePreview)) {
       return setFormError('Primary image must be uploaded to Cloudinary before saving.')
     }
-    if (videoPreview && !isCloudinaryUrl(videoPreview)) {
-      return setFormError('Video must be uploaded to Cloudinary before saving.')
+    if ((videoUrls || []).some((v) => v && !isCloudinaryUrl(v))) {
+      return setFormError('All videos must be uploaded to Cloudinary before saving.')
     }
 
     setSaving(true)
@@ -161,7 +167,8 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
         basePrice,
         image: imagePreview || '',
         images: galleryImages,
-        videoUrl: videoPreview || '',
+        videoUrl: videoUrls[0] || '',
+        videoUrls,
         specifications: specValues,
         offersDraft,
       }),
@@ -187,11 +194,14 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
             key={editingModel?.id || editingModel?._id || 'new-model'}
             image={imagePreview}
             images={galleryImages}
-            video={videoPreview}
-            onChange={({ image, images, video }) => {
+            video={videoUrls[0] || ''}
+            videos={videoUrls}
+            onChange={({ image, images, video, videos }) => {
               setImagePreview(image || null)
               setGalleryImages(Array.isArray(images) ? images : [])
-              setVideoPreview(video || '')
+              const nextVideos =
+                Array.isArray(videos) && videos.length ? videos : video ? [video] : []
+              setVideoUrls(nextVideos)
             }}
             onError={setFormError}
           />

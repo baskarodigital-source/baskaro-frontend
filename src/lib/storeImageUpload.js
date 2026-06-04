@@ -354,3 +354,36 @@ export async function uploadStoreVideoFile(file, { folder = STORE_IMAGE_FOLDERS.
   }
   return uploadStoreFileMultipart('/api/uploads/video/file', file, { folder, onProgress })
 }
+
+/** Upload multiple video files (limited concurrency — each file is large). */
+export async function uploadStoreVideoFiles(files, { folder = STORE_IMAGE_FOLDERS.videos, concurrency = 2, onProgress } = {}) {
+  const list = Array.from(files || []).filter(isVideoFile)
+  if (!list.length) return []
+
+  const urls = []
+  const limit = Math.max(1, Math.min(concurrency, 3))
+  for (let i = 0; i < list.length; i += limit) {
+    const chunk = list.slice(i, i + limit)
+    const batch = await Promise.all(
+      chunk.map((file, chunkIdx) =>
+        uploadStoreVideoFile(file, {
+          folder,
+          onProgress: onProgress
+            ? (pct, phase) => {
+                onProgress({
+                  done: Math.min(list.length, urls.length + chunkIdx + (pct >= 100 ? 1 : 0)),
+                  total: list.length,
+                  fileIndex: i + chunkIdx,
+                  percent: pct,
+                  phase,
+                })
+              }
+            : undefined,
+        }),
+      ),
+    )
+    urls.push(...batch)
+    onProgress?.({ done: urls.length, total: list.length })
+  }
+  return urls
+}

@@ -78,8 +78,9 @@ export function MarketplaceCatalog({ showIntro = true }) {
       const mItems = normalizeItems(modelRes)
         .map((m) => ({
           id: m._id ?? m.id,
-          name: m.name ?? '',
-          image: m.image ?? m.imageUrl ?? '',
+          name: m.modelName || m.name || '',
+          image: m.image || m.imageUrl || '',
+          slug: m.slug || '',
         }))
         .filter((m) => m.id && m.name)
       setModels(mItems)
