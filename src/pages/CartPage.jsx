@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ArrowRight, ShieldCheck, CreditCard } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { appAlert } from '../lib/appDialog.js'
 
 function parsePrice(price) {
   return Number(String(price ?? '').replace(/,/g, '')) || 0
@@ -17,7 +18,11 @@ export default function CartPage() {
   const totalWithTax = Math.round(cartTotal * 1.12)
 
   const handleCheckout = () => {
-    alert('Checkout implementation pending!')
+    appAlert('Online checkout is coming soon. For now, visit a nearby store or contact support to complete your order.', {
+      title: 'Checkout coming soon',
+      variant: 'info',
+      confirmLabel: 'Got it',
+    })
   }
 
   if (cartCount === 0) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Smartphone, Monitor, Watch, Laptop, Plus, Edit2, Trash2, 
@@ -126,7 +127,7 @@ export default function AllCategoriesView() {
       await loadCategories();
       setIsAddingCategory(false);
     } catch (e) {
-      alert(e.message || 'Creation failed');
+      appAlert(e.message || 'Creation failed');
     }
   };
 
@@ -141,7 +142,7 @@ export default function AllCategoriesView() {
       await loadCategories();
       setEditingCategory(null);
     } catch (e) {
-      alert(e.message || 'Update failed');
+      appAlert(e.message || 'Update failed');
     }
   };
 
@@ -183,7 +184,7 @@ export default function AllCategoriesView() {
   };
 
   const handleOnDeleteBrand = async (brandId) => {
-    if (!confirm('Are you sure you want to delete this brand and all its models?')) return;
+    if (!(await appConfirm('Are you sure you want to delete this brand and all its models?'))) return;
     try {
        await api.deleteMobileBrand(brandId);
        await loadBrands(selectedCategory.id);
@@ -193,13 +194,13 @@ export default function AllCategoriesView() {
   };
 
   const handleOnDeleteCategory = async (id) => {
-    if (!confirm('Are you sure you want to delete this category? All its brands and models will be lost.')) return;
+    if (!(await appConfirm('Are you sure you want to delete this category? All its brands and models will be lost.'))) return;
     setBusyId(id);
     try {
       await api.deleteRibbonCategory(id);
       await loadCategories();
     } catch (e) {
-      alert(e.message || 'Delete failed');
+      appAlert(e.message || 'Delete failed');
     } finally {
       setBusyId(null);
     }
@@ -217,7 +218,7 @@ export default function AllCategoriesView() {
   };
 
   const handleOnDeleteDevice = async (deviceId) => {
-    if (!confirm('Are you sure you want to delete this device?')) return;
+    if (!(await appConfirm('Are you sure you want to delete this device?'))) return;
     await api.deleteBrandDevice(deviceId);
     await loadDevices(selectedBrand.id);
   };
@@ -399,7 +400,7 @@ function AddNewCategoryModal({ onCancel, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title) return alert('Enter a title');
+    if (!formData.title) return appAlert('Enter a title');
     setBusy(true);
     try {
       await onSave(formData);
@@ -417,7 +418,7 @@ function AddNewCategoryModal({ onCancel, onSave }) {
       const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.ribbon });
       setFormData((prev) => ({ ...prev, photo: url }));
     } catch (err) {
-      alert(err?.message || 'Could not upload image.');
+      appAlert(err?.message || 'Could not upload image.');
     } finally {
       setBusy(false);
     }
@@ -512,7 +513,7 @@ function EditCategoryModal({ category, onCancel, onSave }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title) return alert('Enter a title');
+    if (!formData.title) return appAlert('Enter a title');
     setBusy(true);
     try {
       await onSave(formData);
@@ -530,7 +531,7 @@ function EditCategoryModal({ category, onCancel, onSave }) {
       const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.ribbon });
       setFormData((prev) => ({ ...prev, photo: url }));
     } catch (err) {
-      alert(err?.message || 'Could not upload image.');
+      appAlert(err?.message || 'Could not upload image.');
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { appAlert, appConfirm } from '../lib/appDialog.js'
 import { motion } from 'framer-motion'
 import { 
   ChevronLeft, Plus, Edit2, Trash2, CheckCircle 
@@ -31,12 +32,12 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
   }, [loadModels]);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this model?')) {
+    if (await appConfirm('Are you sure you want to delete this model?', { title: 'Delete model', destructive: true })) {
        try {
          await api.deleteMobileModel(id);
          loadModels();
        } catch (err) {
-         alert(err.message || 'Delete failed');
+         appAlert(err.message || 'Delete failed');
        }
     }
   };

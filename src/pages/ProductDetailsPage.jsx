@@ -71,7 +71,7 @@ export default function ProductDetailsPage() {
             const m = await getMobileModel(id)
             if (!cancelled) setModel(m)
             try {
-               const o = await getOffers({ modelId: id })
+               const o = await getOffers({ modelId: m?._id || m?.id || id })
                const list = Array.isArray(o?.data) ? o.data : Array.isArray(o) ? o : []
                if (!cancelled) setOffers(Array.isArray(list) ? list : [])
             } catch {

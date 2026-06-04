@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { 
   CheckCircle, Trash2, BarChart, DollarSign, Smartphone 
 } from 'lucide-react'
@@ -38,7 +39,7 @@ export default function ConditionPricingView() {
   };
 
   const saveSettings = () => {
-     window.alert('Algorithm variations deployed to production API successfully.');
+     appAlert('Algorithm variations deployed to production API successfully.');
   };
 
   const DeductionRow = ({ label, objKey, colorClass }) => {

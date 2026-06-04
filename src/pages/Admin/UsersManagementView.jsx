@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { 
   Users, Search, Download, MoreVertical, Ban, Trash2, CheckCircle 
 } from 'lucide-react'
@@ -60,7 +61,7 @@ export default function UsersManagementView() {
 
   async function onDelete(user) {
     const id = user._id || user.id
-    if (!confirm('Delete this user?')) return
+    if (!(await appConfirm('Delete this user?'))) return
     setBusyId(id)
     try {
       await api.deleteUser(id)

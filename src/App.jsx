@@ -6,6 +6,7 @@ import { Button } from './components/Button'
 import { PageSpinner } from './components/PageSpinner'
 import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
+import { DialogProvider } from './context/DialogContext'
 
 // Homepage stays eager for fastest first paint on "/"
 import LandingPage from './pages/LandingPage'
@@ -68,9 +69,10 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <CartProvider>
-      <WishlistProvider>
-        <BrowserRouter>
+    <DialogProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <BrowserRouter>
           <Routes>
             <Route
               path="/admin"
@@ -432,5 +434,6 @@ export default function App() {
         </BrowserRouter>
       </WishlistProvider>
     </CartProvider>
+    </DialogProvider>
   )
 }

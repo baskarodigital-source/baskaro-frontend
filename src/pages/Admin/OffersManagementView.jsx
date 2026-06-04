@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { Plus, CheckCircle, Smartphone, Trash2, Pencil, RefreshCw, Upload, Tag } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
 import { STORE_IMAGE_FOLDERS, ensureStoredImageUrl, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
@@ -92,17 +93,17 @@ export default function OffersManagementView() {
     if (!flashModal) return
     const { title, imageUrl, mrpInr, discountPercent, sortOrder, isActive, linkUrl } = flashModal
     if (!title.trim() || !String(imageUrl).trim()) {
-      alert('Title and an image (URL or upload) are required.')
+      appAlert('Title and an image (URL or upload) are required.')
       return
     }
     const mrpNum = Number(mrpInr)
     const discNum = Number(discountPercent)
     if (!Number.isFinite(mrpNum) || mrpNum < 0) {
-      alert('Enter a valid MRP.')
+      appAlert('Enter a valid MRP.')
       return
     }
     if (!Number.isFinite(discNum) || discNum < 0 || discNum > 100) {
-      alert('Discount must be between 0 and 100%.')
+      appAlert('Discount must be between 0 and 100%.')
       return
     }
     const saleComputed = Math.max(0, Math.round(mrpNum * (1 - discNum / 100)))
@@ -128,19 +129,19 @@ export default function OffersManagementView() {
       setFlashModal(null)
       await loadFlashDeals()
     } catch (err) {
-      alert(err?.message || 'Save failed')
+      appAlert(err?.message || 'Save failed')
     } finally {
       setFlashSaving(false)
     }
   }
 
   async function removeFlashDeal(id) {
-    if (!confirm('Remove this homepage deal?')) return
+    if (!(await appConfirm('Remove this homepage deal?'))) return
     try {
       await api.deleteFlashDeal(id)
       await loadFlashDeals()
     } catch (e) {
-      alert(e?.message || 'Delete failed')
+      appAlert(e?.message || 'Delete failed')
     }
   }
 
@@ -150,7 +151,7 @@ export default function OffersManagementView() {
     const title = String(offerModal.title || '').trim()
     const desc = String(offerModal.desc || '').trim()
     if (!title || !desc) {
-      alert('Title and description are required.')
+      appAlert('Title and description are required.')
       return
     }
 
@@ -169,19 +170,19 @@ export default function OffersManagementView() {
       setOfferModal(null)
       await loadOffers()
     } catch (err) {
-      alert(err?.message || 'Save failed')
+      appAlert(err?.message || 'Save failed')
     } finally {
       setOfferSaving(false)
     }
   }
 
   async function removeOffer(id) {
-    if (!confirm('Remove this offer?')) return
+    if (!(await appConfirm('Remove this offer?'))) return
     try {
       await api.deleteOffer(id)
       await loadOffers()
     } catch (e) {
-      alert(e?.message || 'Delete failed')
+      appAlert(e?.message || 'Delete failed')
     }
   }
 
@@ -255,7 +256,7 @@ export default function OffersManagementView() {
                 try {
                   await api.patchFlashDealSection({ title: sectionTitle })
                 } catch (e) {
-                  alert(e?.message || 'Could not save title')
+                  appAlert(e?.message || 'Could not save title')
                 } finally {
                   setSectionSaving(false)
                 }
@@ -551,7 +552,7 @@ export default function OffersManagementView() {
                         })
                         setFlashModal((m) => (m ? { ...m, imageUrl: url } : m))
                       } catch (err) {
-                        alert(err?.message || 'Could not upload image.')
+                        appAlert(err?.message || 'Could not upload image.')
                       } finally {
                         setFlashImageUploading(false)
                       }

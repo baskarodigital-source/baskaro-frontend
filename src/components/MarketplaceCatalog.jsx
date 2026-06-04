@@ -1,5 +1,5 @@
 import React from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
 
@@ -13,7 +13,14 @@ function normalizeItems(res) {
 /**
  * API-driven brand & model browser — used on `/marketplace`.
  */
+function modelPathSlug(name, slug) {
+  const fromApi = String(slug || '').trim()
+  if (fromApi) return fromApi
+  return String(name || '').trim().replace(/\s+/g, '-')
+}
+
 export function MarketplaceCatalog({ showIntro = true }) {
+  const navigate = useNavigate()
   const [params] = useSearchParams()
   const categoryId = params.get('categoryId') || ''
 
@@ -91,6 +98,17 @@ export function MarketplaceCatalog({ showIntro = true }) {
       setModelsLoading(false)
     }
   }, [])
+
+  const openModel = React.useCallback(
+    (model) => {
+      if (!model?.id) return
+      const slug = modelPathSlug(model.name, model.slug)
+      navigate(`/product/${encodeURIComponent(slug || model.id)}`, {
+        state: { modelId: model.id, brandName: selectedBrand?.name || '' },
+      })
+    },
+    [navigate, selectedBrand?.name],
+  )
 
   return (
     <div className="font-['Outfit']">
@@ -215,13 +233,16 @@ export function MarketplaceCatalog({ showIntro = true }) {
                 ) : (
                   <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     {filteredModels.map((m) => (
-                      <div
+                      <button
                         key={m.id}
-                        className="group rounded-2xl border border-slate-100 bg-white p-4 hover:border-red-200 hover:shadow-sm transition"
+                        type="button"
+                        onClick={() => openModel(m)}
+                        className="group rounded-2xl border border-slate-100 bg-white p-4 text-left hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-red-600/20"
+                        aria-label={`View ${m.name}`}
                       >
                         <div className="h-20 w-full rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden">
                           {m.image ? (
-                            <img src={m.image} alt={m.name} className="h-full w-full object-contain p-2" />
+                            <img src={m.image} alt="" className="h-full w-full object-contain p-2" />
                           ) : (
                             <div className="h-10 w-10 rounded-xl bg-slate-200" />
                           )}
@@ -229,7 +250,10 @@ export function MarketplaceCatalog({ showIntro = true }) {
                         <div className="mt-3 text-xs font-black text-slate-900 group-hover:text-red-700 transition-colors line-clamp-2">
                           {m.name}
                         </div>
-                      </div>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-red-500">
+                          View details
+                        </p>
+                      </button>
                     ))}
                   </div>
                 )}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { appAlert, appConfirm } from '../lib/appDialog.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, Plus, Edit2, Trash2, Package, UploadCloud, ListChecks } from 'lucide-react'
 import DeviceSpecificationsModal from './DeviceSpecificationsModal.jsx'
@@ -38,7 +39,7 @@ export default function BrandDevicesView({
       const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.devices })
       setImagePreview(url)
     } catch (err) {
-      window.alert(err?.message || 'Could not upload image.')
+      appAlert(err?.message || 'Could not upload image.')
     } finally {
       setImageUploading(false)
     }
@@ -95,7 +96,7 @@ export default function BrandDevicesView({
                     try {
                       await onDeleteDevice(d.id)
                     } catch (err) {
-                      window.alert(err.message || 'Could not delete device')
+                      appAlert(err.message || 'Could not delete device')
                     }
                   }}
                   className="h-7 w-7 rounded-lg bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-800 hover:text-red-600 hover:border-red-200 hover:bg-red-50/30 transition-all transform hover:scale-110"
@@ -171,7 +172,7 @@ export default function BrandDevicesView({
                     onClick={async () => {
                       const n = name.trim()
                       if (!n) {
-                        window.alert('Please enter a device name')
+                        appAlert('Please enter a device name')
                         return
                       }
                       setSaving(true)
@@ -186,7 +187,7 @@ export default function BrandDevicesView({
                         setName('')
                         setImagePreview(null)
                       } catch (err) {
-                        window.alert(err.message || 'Could not save device')
+                        appAlert(err.message || 'Could not save device')
                       } finally {
                         setSaving(false)
                       }

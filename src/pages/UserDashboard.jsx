@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { appAlert, appConfirm } from '../lib/appDialog.js'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -498,7 +499,7 @@ function SellTab({ onViewOrders }) {
       setConfirmedOrder(order)
       setStep(7)
     } catch (e) {
-      alert(e.message || 'Could not create order')
+      appAlert(e.message || 'Could not create order')
     } finally {
       setSubmitting(false)
     }
@@ -723,14 +724,14 @@ function InlineAddressForm({ onSaved }) {
     try {
       const res = await api.postAddress({ label, line1, city, state: '', pincode })
       if (res.error) {
-        alert(res.error)
+        appAlert(res.error)
         return
       }
       const addr = res.address || { label, line1, city, state: '', pincode }
       setSaved(true)
       onSaved(addr)
     } catch (e) {
-      alert(e.message || 'Could not save address')
+      appAlert(e.message || 'Could not save address')
     } finally {
       setSaving(false)
     }
@@ -999,7 +1000,7 @@ function OrderCard({ order, expanded, onToggle, onRefresh, payingId, setPayingId
         onRefresh?.()
       }, 1500)
     } catch (err) {
-      alert(err.message || 'Could not initiate payment')
+      appAlert(err.message || 'Could not initiate payment')
     } finally {
       setPayLoading(false)
     }
@@ -1164,7 +1165,7 @@ function ProfileTab({ user }) {
     try {
       const res = await api.patchMe({ name, email, phone })
       if (res.error) {
-        alert(res.error)
+        appAlert(res.error)
         return
       }
       if (res.user) updateSessionUser(res.user)
@@ -1172,7 +1173,7 @@ function ProfileTab({ user }) {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
-      alert(err.message || 'Could not save profile')
+      appAlert(err.message || 'Could not save profile')
     }
   }
   return (
@@ -1240,14 +1241,14 @@ function AddressTab() {
     try {
       const res = await api.postAddress(form)
       if (res.error) {
-        alert(res.error)
+        appAlert(res.error)
         return
       }
       setAdding(false)
       setForm({ label: 'Home', line1: '', city: '', state: '', pincode: '' })
       await loadAddresses()
     } catch (e) {
-      alert(e.message || 'Could not save')
+      appAlert(e.message || 'Could not save')
     }
   }
 
@@ -1258,7 +1259,7 @@ function AddressTab() {
       await api.deleteAddress(id)
       await loadAddresses()
     } catch (e) {
-      alert(e.message || 'Could not delete')
+      appAlert(e.message || 'Could not delete')
     }
   }
   return (

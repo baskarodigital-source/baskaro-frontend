@@ -1,4 +1,5 @@
 import React from 'react'
+import { appAlert, appConfirm } from '../lib/appDialog.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, Edit2, Trash2 } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
@@ -55,7 +56,7 @@ export default function DeviceSpecificationsModal({ open, onClose, device }) {
   }
 
   const onDeleteSpec = async (specId) => {
-    if (!window.confirm('Delete this specification?')) return
+    if (!(await appConfirm('Delete this specification?'))) return
     setErr('')
     setOk('')
     try {
@@ -69,7 +70,7 @@ export default function DeviceSpecificationsModal({ open, onClose, device }) {
   }
 
   const onDeleteOption = async (optionId) => {
-    if (!window.confirm('Delete this option?')) return
+    if (!(await appConfirm('Delete this option?'))) return
     setErr('')
     setOk('')
     try {

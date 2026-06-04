@@ -1,4 +1,5 @@
 import React from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { Plus, Trash2, Pencil, RefreshCw, Upload } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
 import { STORE_IMAGE_FOLDERS, ensureStoredImageUrl, uploadStoreImageFile } from '../../lib/storeImageUpload.js'
@@ -56,7 +57,7 @@ export default function ServicesManagementView() {
     e.preventDefault()
     if (!modal) return
     const label = String(modal.label || '').trim()
-    if (!label) return alert('Label is required')
+    if (!label) return appAlert('Label is required')
     const path = pathFromLabel(label, modal.path || '/')
     setSaving(true)
     try {
@@ -76,19 +77,19 @@ export default function ServicesManagementView() {
       setModal(null)
       await load()
     } catch (e2) {
-      alert(e2?.message || 'Save failed')
+      appAlert(e2?.message || 'Save failed')
     } finally {
       setSaving(false)
     }
   }
 
   async function remove(id) {
-    if (!confirm('Delete this service?')) return
+    if (!(await appConfirm('Delete this service?'))) return
     try {
       await api.deleteHomeService(id)
       await load()
     } catch (e) {
-      alert(e?.message || 'Delete failed')
+      appAlert(e?.message || 'Delete failed')
     }
   }
 
@@ -260,7 +261,7 @@ export default function ServicesManagementView() {
                         })
                         setModal((m) => (m ? { ...m, imageUrl: url } : m))
                       } catch (err) {
-                        alert(err?.message || 'Could not upload image.')
+                        appAlert(err?.message || 'Could not upload image.')
                       } finally {
                         setUploadingImage(false)
                       }

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { Plus, Minus, Package, CheckCircle, RefreshCw } from 'lucide-react'
 import * as api from '../../lib/api/baskaroApi.js'
 
@@ -116,7 +117,7 @@ export default function InventoryManagementView() {
       const updated = await api.patchInventoryStock(id, { stock: nextStock })
       updateLocalItem(updated)
     } catch (e) {
-      alert(e?.message || 'Stock update failed')
+      appAlert(e?.message || 'Stock update failed')
     } finally {
       setActiveActionId('')
     }
@@ -128,7 +129,7 @@ export default function InventoryManagementView() {
       const updated = await api.patchInventoryMarkSold(id)
       updateLocalItem(updated)
     } catch (e) {
-      alert(e?.message || 'Could not mark as sold')
+      appAlert(e?.message || 'Could not mark as sold')
     } finally {
       setActiveActionId('')
     }
@@ -137,7 +138,7 @@ export default function InventoryManagementView() {
   const handleAddStock = async (e) => {
     e.preventDefault()
     if (!newStock.modelId) {
-      alert('Please select a phone model')
+      appAlert('Please select a phone model')
       return
     }
     setSaving(true)
@@ -158,7 +159,7 @@ export default function InventoryManagementView() {
         stock: 1,
       })
     } catch (err) {
-      alert(err?.message || 'Could not add stock')
+      appAlert(err?.message || 'Could not add stock')
     } finally {
       setSaving(false)
     }

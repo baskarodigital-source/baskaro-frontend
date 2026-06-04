@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { 
   UploadCloud, Trash2, Image as ImageIcon, Plus 
 } from 'lucide-react'
@@ -62,7 +63,7 @@ export default function CmsManagementView() {
       })
       .catch((err) => {
         if (cancelled) return
-        alert(err?.message || 'Failed to load banners')
+        appAlert(err?.message || 'Failed to load banners')
       })
       .finally(() => {
         if (!cancelled) setIsBusy(false)
@@ -80,7 +81,7 @@ export default function CmsManagementView() {
       const next = toUiBanner(updated)
       setBanners((prev) => prev.map((b) => (b.id === id ? { ...b, isActive: next.isActive } : b)))
     } catch (err) {
-      alert(err?.message || 'Failed to update banner status')
+      appAlert(err?.message || 'Failed to update banner status')
     }
   };
 
@@ -89,14 +90,14 @@ export default function CmsManagementView() {
       await deleteBanner(id)
       setBanners((prev) => prev.filter((b) => b.id !== id))
     } catch (err) {
-      alert(err?.message || 'Failed to delete banner')
+      appAlert(err?.message || 'Failed to delete banner')
     }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!newBanner.imgUrl) {
-      alert('Please upload an image first.');
+      appAlert('Please upload an image first.');
       return;
     }
     try {
@@ -112,7 +113,7 @@ export default function CmsManagementView() {
       setUploadError('');
       setNewBanner({ title: '', position: 'HOME_HERO', imgUrl: '' });
     } catch (err) {
-      alert(err?.message || 'Failed to create banner')
+      appAlert(err?.message || 'Failed to create banner')
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { appAlert, appConfirm } from '../lib/appDialog.js'
 import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../lib/storeImageUpload.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -30,7 +31,7 @@ export default function CategoryBrandsView({
       const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.brands })
       setBrandImagePreview(url)
     } catch (err) {
-      window.alert(err?.message || 'Could not upload logo.')
+      appAlert(err?.message || 'Could not upload logo.')
     } finally {
       setLogoUploading(false)
     }
@@ -84,7 +85,7 @@ export default function CategoryBrandsView({
                             try {
                                await onDeleteBrand(brand.id)
                             } catch (err) {
-                               window.alert(err.message || 'Could not delete brand')
+                               appAlert(err.message || 'Could not delete brand')
                             }
                          }}
                          className="h-7 w-7 rounded-lg bg-white shadow-md border border-slate-200 flex items-center justify-center text-slate-800 hover:text-red-600 hover:border-red-200 hover:bg-red-50/30 transition-all transform hover:scale-110"
@@ -174,7 +175,7 @@ export default function CategoryBrandsView({
                            onClick={async () => {
                              const name = newBrandName.trim()
                              if (!name) {
-                               window.alert('Please enter a brand name')
+                               appAlert('Please enter a brand name')
                                return
                              }
                              setBrandSaving(true)
@@ -189,7 +190,7 @@ export default function CategoryBrandsView({
                                setNewBrandName('')
                                setBrandImagePreview(null)
                              } catch (err) {
-                               window.alert(err.message || 'Could not save brand')
+                               appAlert(err.message || 'Could not save brand')
                              } finally {
                                setBrandSaving(false)
                              }
