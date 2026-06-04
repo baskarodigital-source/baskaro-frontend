@@ -100,6 +100,11 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
     }
   };
 
+  const getModelPreviewImage = (model) => {
+    const galleryFirst = Array.isArray(model?.images) ? model.images[0] : ''
+    return model?.image || model?.imageUrl || galleryFirst || '/placeholder-phone.png'
+  }
+
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
@@ -153,7 +158,7 @@ export default function BrandModelsView({ category, brand, device, onBack }) {
                             <td className="px-8 py-5">
                                <div className="flex items-center gap-5">
                                   <div className="h-14 w-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex-shrink-0 p-2 overflow-hidden group-hover:border-blue-200 group-hover:scale-105 transition-all">
-                                     <img src={model.image || '/placeholder-phone.png'} alt={model.name} className="h-full w-full object-contain" />
+                                     <img src={getModelPreviewImage(model)} alt={model.name} className="h-full w-full object-contain" />
                                   </div>
                                   <div>
                                      <span className="block text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{model.name}</span>

@@ -33,7 +33,12 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 3000,
       proxy: {
-        '/api': { target: apiTarget, changeOrigin: true },
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true,
+          timeout: 900_000,
+          proxyTimeout: 900_000,
+        },
         '/health': { target: apiTarget, changeOrigin: true },
       },
     },

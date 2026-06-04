@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { 
-  UploadCloud, Trash2, Plus 
-} from 'lucide-react'
+import { Trash2, Plus } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
-import { STORE_IMAGE_FOLDERS, uploadStoreImageFile } from '../lib/storeImageUpload.js'
+import ProductMediaManager from './ProductMediaManager.jsx'
+import { isCloudinaryUrl, isLocalMediaUrl } from '../lib/storeImageUpload.js'
 
 export default function AddNewModelForm({ onCancel, category, brand, device, editingModel, onSave }) {
-  const [imagePreview, setImagePreview] = useState(editingModel?.image || null);
-  const [imageUploading, setImageUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(editingModel?.image || editingModel?.imageUrl || null);
+  const [galleryImages, setGalleryImages] = useState(() =>
+    Array.isArray(editingModel?.images) ? editingModel.images.filter(Boolean) : [],
+  )
+  const [videoPreview, setVideoPreview] = useState(editingModel?.video || editingModel?.videoUrl || '')
   const [specs, setSpecs] = useState([])
   const [specValues, setSpecValues] = useState(() => (editingModel?.specifications && typeof editingModel.specifications === 'object'
     ? { ...editingModel.specifications }
@@ -139,6 +141,17 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       if (empty) return setFormError('Please fill all required specifications.')
     }
 
+    const mediaUrls = [imagePreview, ...(galleryImages || []), videoPreview].filter(Boolean)
+    if (mediaUrls.some(isLocalMediaUrl)) {
+      return setFormError('Media is still uploading locally. Wait until uploads finish (Cloudinary URLs).')
+    }
+    if (imagePreview && !isCloudinaryUrl(imagePreview)) {
+      return setFormError('Primary image must be uploaded to Cloudinary before saving.')
+    }
+    if (videoPreview && !isCloudinaryUrl(videoPreview)) {
+      return setFormError('Video must be uploaded to Cloudinary before saving.')
+    }
+
     setSaving(true)
     Promise.resolve(
       onSave({
@@ -147,6 +160,8 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
         modelName,
         basePrice,
         image: imagePreview || '',
+        images: galleryImages,
+        videoUrl: videoPreview || '',
         specifications: specValues,
         offersDraft,
       }),
@@ -160,19 +175,6 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       .finally(() => setSaving(false))
   };
   
-  const handleImageChange = async (file) => {
-    if (!file?.type?.startsWith('image/')) return
-    setImageUploading(true)
-    try {
-      const url = await uploadStoreImageFile(file, { folder: STORE_IMAGE_FOLDERS.models })
-      setImagePreview(url)
-    } catch (err) {
-      setFormError(err?.message || 'Could not upload image.')
-    } finally {
-      setImageUploading(false)
-    }
-  };
-
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
        <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-4 sm:px-8 sm:py-6">
@@ -180,64 +182,21 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
           <p className="mt-1 text-xs text-slate-500 sm:text-sm">Fill in the specifications to list a new item on the marketplace.</p>
        </div>
 
-       <div className="grid gap-8 p-4 sm:gap-10 sm:p-6 lg:p-8 xl:grid-cols-3">
-          {/* Left Column - Image Upload */}
-          <div className="xl:col-span-1 space-y-4">
-             <label className="text-sm font-black uppercase text-slate-800 tracking-wider">Product Primary Image <span className="text-red-500">*</span></label>
-             
-             <div 
-               className="relative flex h-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 transition-colors group hover:border-blue-400 hover:bg-slate-50 sm:h-72"
-               onDragOver={(e) => e.preventDefault()}
-               onDrop={(e) => {
-                 e.preventDefault();
-                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                   handleImageChange(e.dataTransfer.files[0]);
-                 }
-               }}
-               onClick={() => document.getElementById('product-image-upload').click()}
-             >
-               <input 
-                 id="product-image-upload" 
-                 type="file" 
-                 accept="image/*" 
-                 className="hidden" 
-                 onChange={(e) => {
-                   if (e.target.files && e.target.files[0]) {
-                     handleImageChange(e.target.files[0]);
-                   }
-                 }} 
-               />
-               
-               {imagePreview ? (
-                 <>
-                   <img src={imagePreview} alt="Preview" className="w-full h-full object-contain p-4" />
-                   <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                     <button 
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         setImagePreview(null);
-                         document.getElementById('product-image-upload').value = '';
-                       }}
-                       className="bg-red-600 text-white p-3 px-4 rounded-xl hover:bg-red-700 transition shadow-lg flex items-center gap-2 text-sm font-bold"
-                     >
-                       <Trash2 size={16} /> Remove Image
-                     </button>
-                   </div>
-                 </>
-               ) : (
-                 <div className="p-10 flex flex-col items-center text-center">
-                    <div className="h-16 w-16 bg-white shadow-sm rounded-full flex items-center justify-center mb-4 text-blue-500 group-hover:scale-110 transition-transform">
-                       <UploadCloud size={28} />
-                    </div>
-                    <p className="text-sm font-bold text-slate-700">Click or drag image to upload</p>
-                    <p className="text-xs font-semibold text-slate-400 mt-2">PNG, JPG or WEBP (max. 5MB)<br/>Transparent background preferred</p>
-                 </div>
-               )}
-             </div>
-          </div>
+       <div className="space-y-8 p-4 sm:gap-10 sm:p-6 lg:p-8">
+          <ProductMediaManager
+            key={editingModel?.id || editingModel?._id || 'new-model'}
+            image={imagePreview}
+            images={galleryImages}
+            video={videoPreview}
+            onChange={({ image, images, video }) => {
+              setImagePreview(image || null)
+              setGalleryImages(Array.isArray(images) ? images : [])
+              setVideoPreview(video || '')
+            }}
+            onError={setFormError}
+          />
 
-          {/* Right Column - Form Fields */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="space-y-8 border-t border-slate-100 pt-8">
              
              {/* Section 1 */}
              <div className="space-y-4">
