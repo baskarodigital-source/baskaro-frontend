@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Smartphone, ScanLine, Wrench, PanelRight } from 'lucide-react'
+import { buildSellFlowSearch, readSellFlowParams } from '../lib/sellFlowParams.js'
 
 const DEFECT_OPTIONS = [
   { id: 'screen-scratch', label: 'Broken/scratch on device screen', Icon: Smartphone },
@@ -12,13 +13,8 @@ const DEFECT_OPTIONS = [
 export default function SellDefectsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const item = searchParams.get('item')?.trim() || 'Selected device'
-  const price = searchParams.get('price')?.trim() || '24,120'
-  const img = searchParams.get('img')?.trim() || ''
-  const cat = searchParams.get('cat')?.trim() || 'phone'
-  const calls = searchParams.get('calls')?.trim() || ''
-  const touch = searchParams.get('touch')?.trim() || ''
-  const screen = searchParams.get('screen')?.trim() || ''
+  const flow = readSellFlowParams(searchParams)
+  const { item, price, img, cat, calls, touch, screen } = flow
 
   const [selectedDefects, setSelectedDefects] = useState([])
 
@@ -46,10 +42,7 @@ export default function SellDefectsPage() {
     <div className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-4 text-xs font-semibold text-slate-500">
-          <Link
-            to={`/sell/device-check?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}&price=${encodeURIComponent(price)}&img=${encodeURIComponent(img)}`}
-            className="hover:text-red-600"
-          >
+          <Link to={`/sell/device-check${buildSellFlowSearch(flow)}`} className="hover:text-red-600">
             Back
           </Link>
         </div>
@@ -83,7 +76,10 @@ export default function SellDefectsPage() {
               type="button"
               onClick={() =>
                 navigate(
-                  `/sell/functional-problems?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}&price=${encodeURIComponent(price)}&img=${encodeURIComponent(img)}&calls=${encodeURIComponent(calls)}&touch=${encodeURIComponent(touch)}&screen=${encodeURIComponent(screen)}`,
+                  `/sell/functional-problems${buildSellFlowSearch({
+                    ...flow,
+                    defects: selectedDefects.join(','),
+                  })}`,
                 )
               }
               className="mx-auto mt-10 flex h-11 min-w-[190px] items-center justify-center rounded-lg bg-red-600 px-6 text-lg font-bold text-white transition hover:bg-red-700"

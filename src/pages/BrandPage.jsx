@@ -98,7 +98,9 @@ const BrandPage = () => {
           .map((m) => ({
             id: m._id || m.id,
             name: m.modelName || m.name || '',
+            slug: m.slug || '',
             image: m.image || '',
+            basePrice: m.basePrice,
           }))
           .filter((m) => m.id && m.name)
         if (!cancelled) setModels(mapped)
@@ -184,7 +186,13 @@ const BrandPage = () => {
                          {m.name}
                       </h3>
                       <button
-                        onClick={() => navigate(`/sell/assessment/${brandName}/${m.name.replace(/ /g, '-')}`)}
+                        type="button"
+                        onClick={() => {
+                          const modelSlug = (m.slug || m.name).trim().replace(/\s+/g, '-')
+                          navigate(
+                            `/sell/assessment/${encodeURIComponent(decodedBrand)}/${encodeURIComponent(modelSlug)}?modelId=${encodeURIComponent(m.id)}`,
+                          )
+                        }}
                         className="w-full py-4 rounded-2xl bg-slate-900 group-hover:bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-slate-900/10 group-hover:shadow-rose-600/30"
                       >
                         SELL NOW

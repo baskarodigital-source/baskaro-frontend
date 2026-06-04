@@ -23,7 +23,9 @@ const SellDeviceCheckPage = lazy(() => import('./pages/SellDeviceCheckPage'))
 const SellDefectsPage = lazy(() => import('./pages/SellDefectsPage'))
 const SellFunctionalProblemsPage = lazy(() => import('./pages/SellFunctionalProblemsPage'))
 const SellAccessoriesPage = lazy(() => import('./pages/SellAccessoriesPage'))
+const SellQuotePage = lazy(() => import('./pages/SellQuotePage'))
 const SellModelDetailPage = lazy(() => import('./pages/SellModelDetailPage'))
+const SellAssessmentPage = lazy(() => import('./pages/SellAssessmentPage'))
 const BuyAccessoriesPage = lazy(() => import('./pages/BuyAccessoriesPage'))
 const RepairPhonePage = lazy(() => import('./pages/RepairPhonePage'))
 const FindNewPhonePage = lazy(() => import('./pages/FindNewPhonePage'))
@@ -165,10 +167,26 @@ export default function App() {
                       }
                     />
                     <Route
+                      path="/sell/quote"
+                      element={
+                        <LazyPage>
+                          <SellQuotePage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
                       path="/sell/model-detail"
                       element={
                         <LazyPage>
                           <SellModelDetailPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/sell/assessment/:brandSlug/:modelSlug"
+                      element={
+                        <LazyPage>
+                          <SellAssessmentPage />
                         </LazyPage>
                       }
                     />

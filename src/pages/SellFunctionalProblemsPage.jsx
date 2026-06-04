@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { buildSellFlowSearch, readSellFlowParams } from '../lib/sellFlowParams.js'
 import {
   Camera,
   Fingerprint,
@@ -40,13 +41,9 @@ const FUNCTIONAL_OPTIONS = [
 export default function SellFunctionalProblemsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const item = searchParams.get('item')?.trim() || 'Selected device'
-  const price = searchParams.get('price')?.trim() || '24,120'
-  const img = searchParams.get('img')?.trim() || ''
-  const cat = searchParams.get('cat')?.trim() || 'phone'
-  const calls = searchParams.get('calls')?.trim() || ''
-  const touch = searchParams.get('touch')?.trim() || ''
-  const screen = searchParams.get('screen')?.trim() || ''
+  const flow = readSellFlowParams(searchParams)
+  const { item, price, img, cat, calls, touch, screen } = flow
+  const flowQuery = buildSellFlowSearch(flow)
 
   const [selectedFunctional, setSelectedFunctional] = useState([])
 
@@ -75,10 +72,7 @@ export default function SellFunctionalProblemsPage() {
     <div className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-4 text-xs font-semibold text-slate-500">
-          <Link
-            to={`/sell/defects?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}&price=${encodeURIComponent(price)}&img=${encodeURIComponent(img)}&calls=${encodeURIComponent(calls)}&touch=${encodeURIComponent(touch)}&screen=${encodeURIComponent(screen)}`}
-            className="hover:text-red-600"
-          >
+          <Link to={`/sell/defects${flowQuery}`} className="hover:text-red-600">
             Back
           </Link>
         </div>
@@ -112,7 +106,10 @@ export default function SellFunctionalProblemsPage() {
               type="button"
               onClick={() =>
                 navigate(
-                  `/sell/accessories?item=${encodeURIComponent(item)}&cat=${encodeURIComponent(cat)}&price=${encodeURIComponent(price)}&img=${encodeURIComponent(img)}&calls=${encodeURIComponent(calls)}&touch=${encodeURIComponent(touch)}&screen=${encodeURIComponent(screen)}`,
+                  `/sell/accessories${buildSellFlowSearch({
+                    ...flow,
+                    functional: selectedFunctional.join(','),
+                  })}`,
                 )
               }
               className="mx-auto mt-10 flex h-11 min-w-[190px] items-center justify-center rounded-lg bg-red-600 px-6 text-lg font-bold text-white transition hover:bg-red-700"
