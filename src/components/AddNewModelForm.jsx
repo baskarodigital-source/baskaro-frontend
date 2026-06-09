@@ -1,8 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
 import ProductMediaManager from './ProductMediaManager.jsx'
+import ProductColorVariantsEditor from './ProductColorVariantsEditor.jsx'
+import { loadColorVariantDraftsFromModel } from '../lib/colorVariants.js'
 import { isCloudinaryUrl, isLocalMediaUrl } from '../lib/storeImageUpload.js'
+import {
+  DEFAULT_MODEL_CONDITION_GRADES,
+  MODEL_CONDITION_GRADES,
+  normalizeModelConditionGrades,
+} from '../lib/modelConditionGrades.js'
 
 export default function AddNewModelForm({ onCancel, category, brand, device, editingModel, onSave }) {
   const [imagePreview, setImagePreview] = useState(editingModel?.image || editingModel?.imageUrl || null);
@@ -20,6 +27,26 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
   const [specValues, setSpecValues] = useState(() => (editingModel?.specifications && typeof editingModel.specifications === 'object'
     ? { ...editingModel.specifications }
     : {}))
+  const [colorVariantsDraft, setColorVariantsDraft] = useState(() =>
+    loadColorVariantDraftsFromModel(editingModel?.colorVariants),
+  )
+  const [colorVariantsUploading, setColorVariantsUploading] = useState(false)
+  const [conditionGradesDraft, setConditionGradesDraft] = useState(() =>
+    normalizeModelConditionGrades(editingModel?.conditionGrades ?? DEFAULT_MODEL_CONDITION_GRADES),
+  )
+
+  const handleColorVariantsChange = useCallback((updater) => {
+    setColorVariantsDraft((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      if (import.meta.env.DEV) {
+        console.log(
+          '[AddNewModelForm] colorVariants',
+          Array.isArray(next) ? next.map((r) => ({ name: r.name, images: r.images?.length ?? 0 })) : next,
+        )
+      }
+      return next
+    })
+  }, [])
   const [offersDraft, setOffersDraft] = useState([])
   const [offersLoading, setOffersLoading] = useState(false)
 
@@ -97,7 +124,19 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
     if (editingModel.specifications && typeof editingModel.specifications === 'object') {
       setSpecValues({ ...editingModel.specifications })
     }
+    setConditionGradesDraft(
+      normalizeModelConditionGrades(editingModel.conditionGrades ?? DEFAULT_MODEL_CONDITION_GRADES),
+    )
   }, [editingModel?._id, editingModel?.id, category?.id, brand?.id, device?.id])
+
+  // Load color variants only when switching models — not when category/brand/device resolve
+  useEffect(() => {
+    if (!editingModel) {
+      setColorVariantsDraft([])
+      return
+    }
+    setColorVariantsDraft(loadColorVariantDraftsFromModel(editingModel.colorVariants))
+  }, [editingModel?._id, editingModel?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -178,6 +217,24 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
 
   const requiredSpecKeys = useMemo(() => specs.filter((s) => s.required).map((s) => s.key), [specs])
 
+  const handleMediaChange = useCallback(({ image, images, video, videos }) => {
+    const nextVideos =
+      Array.isArray(videos) && videos.length ? videos : video ? [video] : []
+    mediaPayloadRef.current = {
+      image: image || '',
+      images: Array.isArray(images) ? images : [],
+      video: nextVideos[0] || '',
+      videos: nextVideos,
+    }
+    setImagePreview(image || null)
+    setGalleryImages(Array.isArray(images) ? images : [])
+    setVideoUrls(nextVideos)
+  }, [])
+
+  const handleMediaError = useCallback((msg) => {
+    setFormError(msg ?? '')
+  }, [])
+
   const handleSubmit = (e) => {
     e.preventDefault()
     setFormError('')
@@ -200,7 +257,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       if (empty) return setFormError('Please fill all required specifications.')
     }
 
-    if (mediaUploading) {
+    if (mediaUploading || colorVariantsUploading) {
       return setFormError('Media is still uploading. Wait until uploads finish, then save.')
     }
 
@@ -228,12 +285,57 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
       return setFormError('All videos must be uploaded to Cloudinary before saving.')
     }
 
+    const colorRows = (colorVariantsDraft || [])
+      .map((row) => {
+        const images = (Array.isArray(row?.images) && row.images.length
+          ? row.images
+          : row?.image
+            ? [row.image]
+            : []
+        )
+          .map((u) => String(u || '').trim())
+          .filter(Boolean)
+        const uniqueImages = [...new Set(images)]
+        const videoUrls = (Array.isArray(row?.videoUrls) ? row.videoUrls : [])
+          .map((u) => String(u || '').trim())
+          .filter(Boolean)
+        return {
+          name: String(row?.name || '').trim(),
+          hex: String(row?.hex || '').trim(),
+          image: uniqueImages[0] || '',
+          images: uniqueImages,
+          videoUrls,
+        }
+      })
+      .filter((row) => row.name || row.images.length || row.hex)
+
+    for (const row of colorRows) {
+      if (!row.name) return setFormError('Each color variant needs a name.')
+      if (!row.images.length) return setFormError(`Add at least one image for color "${row.name}".`)
+      for (const img of row.images) {
+        if (!isCloudinaryUrl(img)) {
+          return setFormError(`Images for "${row.name}" must finish uploading to Cloudinary before saving.`)
+        }
+      }
+      for (const vid of row.videoUrls) {
+        if (!isCloudinaryUrl(vid)) {
+          return setFormError(`Videos for "${row.name}" must finish uploading to Cloudinary before saving.`)
+        }
+      }
+    }
+
+    const conditionGrades = normalizeModelConditionGrades(conditionGradesDraft)
+    if (!conditionGrades.length) {
+      return setFormError('Select at least one condition (Superb, Good, or Fair).')
+    }
+
     const modelBody = {
       brandId: formData.brandId,
       deviceId: formData.deviceId,
       modelName,
       basePrice,
       specifications: specValues,
+      conditionGrades,
     }
 
     if (primaryImage) modelBody.image = primaryImage
@@ -241,6 +343,15 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
     if (videos?.length) {
       modelBody.videoUrls = videos
       modelBody.videoUrl = videos[0]
+    }
+    if (colorRows.length) {
+      modelBody.colorVariants = colorRows
+      modelBody.image = colorRows[0].images[0]
+      modelBody.images = colorRows.flatMap((r) => r.images)
+      modelBody.videoUrls = []
+      modelBody.videoUrl = ''
+    } else {
+      modelBody.colorVariants = []
     }
 
     setSaving(true)
@@ -279,21 +390,9 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
             images={galleryImages}
             video={videoUrls[0] || ''}
             videos={videoUrls}
-            onChange={({ image, images, video, videos }) => {
-              const nextVideos =
-                Array.isArray(videos) && videos.length ? videos : video ? [video] : []
-              mediaPayloadRef.current = {
-                image: image || '',
-                images: Array.isArray(images) ? images : [],
-                video: nextVideos[0] || '',
-                videos: nextVideos,
-              }
-              setImagePreview(image || null)
-              setGalleryImages(Array.isArray(images) ? images : [])
-              setVideoUrls(nextVideos)
-            }}
+            onChange={handleMediaChange}
             onUploadingChange={setMediaUploading}
-            onError={setFormError}
+            onError={handleMediaError}
           />
 
           <div className="space-y-8 border-t border-slate-100 pt-8">
@@ -349,7 +448,54 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                      />
                    </div>
                 </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      Available Conditions <span className="text-red-500">*</span>
+                    </label>
+                    <p className="text-xs font-semibold text-slate-500 mb-3">
+                      Choose which conditions appear on the product page for this listing.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {MODEL_CONDITION_GRADES.map((grade) => {
+                      const selected = conditionGradesDraft.includes(grade)
+                      return (
+                        <button
+                          key={grade}
+                          type="button"
+                          onClick={() => {
+                            setConditionGradesDraft((prev) => {
+                              const next = selected
+                                ? prev.filter((g) => g !== grade)
+                                : [...prev, grade]
+                              return normalizeModelConditionGrades(next)
+                            })
+                          }}
+                          className={`min-w-[100px] rounded-xl border-2 px-5 py-3 text-sm font-black transition-all ${
+                            selected
+                              ? 'border-green-600 bg-green-50 text-green-800 shadow-sm'
+                              : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {grade}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {!conditionGradesDraft.length ? (
+                    <p className="text-xs font-bold text-red-500">Select at least one condition.</p>
+                  ) : null}
+                </div>
              </div>
+
+             <ProductColorVariantsEditor
+               variants={colorVariantsDraft}
+               onChange={handleColorVariantsChange}
+               onError={setFormError}
+               onUploadingChange={setColorVariantsUploading}
+             />
 
              {/* Section 2 */}
              <div className="space-y-4">

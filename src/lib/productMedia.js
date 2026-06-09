@@ -1,5 +1,6 @@
 import { isCloudinaryUrl } from './storeImageUpload.js'
 import { optimizeDeliveryUrl } from './optimizeImageUrl.js'
+import { normalizeColorVariants } from './colorVariants.js'
 
 /** Collect unique video URLs from a phone model document. */
 export function collectModelVideoUrls(model) {
@@ -59,6 +60,68 @@ export function buildModelMediaGallery(model) {
     media,
     images: media.filter((m) => m.type === 'image').map((m) => m.url),
     videos,
+  }
+}
+
+/** Gallery for a single color variant (multiple images + videos). */
+export function buildColorVariantMediaGallery(variant) {
+  if (!variant) return []
+  const images = variant.images?.length ? variant.images : variant.image ? [variant.image] : []
+  const videos = variant.videoUrls || []
+  const posterFallback = images[0] ? optimizeDeliveryUrl(images[0], { width: 200 }) : ''
+
+  return [
+    ...images.map((url) => ({
+      type: 'image',
+      url: optimizeDeliveryUrl(url, { width: 960 }),
+      poster: optimizeDeliveryUrl(url, { width: 200 }),
+      colorId: variant.id,
+      colorName: variant.name,
+    })),
+    ...videos.map((url) => ({
+      type: 'video',
+      url,
+      poster: cloudinaryVideoPoster(url) || posterFallback,
+      colorId: variant.id,
+      colorName: variant.name,
+    })),
+  ]
+}
+
+/**
+ * When color variants exist, they become the primary gallery (one image per color).
+ * Extra product images that are not color images are appended after.
+ */
+export function buildColorAwareMediaGallery(model) {
+  const colorVariants = normalizeColorVariants(model?.colorVariants)
+  if (!colorVariants.length) {
+    return { ...buildModelMediaGallery(model), colorVariants: [] }
+  }
+
+  const colorImageSet = new Set(colorVariants.flatMap((c) => c.images || [c.image]))
+  const colorMedia = colorVariants.flatMap((c) => buildColorVariantMediaGallery(c))
+
+  const extras = collectModelImageUrls(model)
+    .filter((url) => !colorImageSet.has(url))
+    .map((url) => ({
+      type: 'image',
+      url: optimizeDeliveryUrl(url, { width: 960 }),
+      poster: optimizeDeliveryUrl(url, { width: 200 }),
+    }))
+
+  const videos = collectModelVideoUrls(model).map((url) => ({
+    type: 'video',
+    url,
+    poster: cloudinaryVideoPoster(url) || colorMedia[0]?.url || '',
+  }))
+
+  const media = [...colorMedia, ...extras, ...videos]
+
+  return {
+    colorVariants,
+    media,
+    images: media.filter((m) => m.type === 'image').map((m) => m.url),
+    videos: videos.map((v) => v.url),
   }
 }
 

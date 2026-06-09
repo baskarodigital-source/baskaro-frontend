@@ -35,10 +35,71 @@ export function isLocalMediaUrl(url) {
   return t.startsWith('blob:') || (t.startsWith('data:') && !isCloudinaryUrl(t))
 }
 
+const IMAGE_SIGNATURES = [
+  {
+    mime: 'image/jpeg',
+    ext: '.jpg',
+    test: (b) => b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  },
+  {
+    mime: 'image/png',
+    ext: '.png',
+    test: (b) => b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  },
+  {
+    mime: 'image/gif',
+    ext: '.gif',
+    test: (b) => b.length >= 3 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46,
+  },
+  {
+    mime: 'image/webp',
+    ext: '.webp',
+    test: (b) =>
+      b.length >= 12 &&
+      b[0] === 0x52 &&
+      b[1] === 0x49 &&
+      b[2] === 0x46 &&
+      b[3] === 0x46 &&
+      b[8] === 0x57 &&
+      b[9] === 0x45 &&
+      b[10] === 0x42 &&
+      b[11] === 0x50,
+  },
+]
+
+/** Detect image type from file header (Windows often omits name extension + MIME). */
+export function sniffImageMime(bytes) {
+  const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || [])
+  return IMAGE_SIGNATURES.find((sig) => sig.test(b)) || null
+}
+
 export function isImageFile(file) {
   if (!file) return false
-  if (file.type && /^image\/(jpeg|png|webp)$/i.test(file.type)) return true
-  return /\.(jpe?g|png|webp)$/i.test(file.name || '')
+  if (file.type && /^image\/(jpeg|png|webp|gif|bmp|svg\+xml)$/i.test(file.type)) return true
+  if (/\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name || '')) return true
+  // Windows sometimes omits MIME type and extension in the picker — accept non-empty image/* from the OS.
+  if (file.type && /^image\//i.test(file.type)) return true
+  return false
+}
+
+/**
+ * Accept extensionless / unknown-MIME images after reading the file header.
+ * Returns a File with a proper name + MIME when sniffing succeeds.
+ */
+export async function normalizeImageFile(file) {
+  if (!file) return null
+  if (isImageFile(file)) return file
+  let head
+  try {
+    head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+  } catch {
+    return null
+  }
+  const sig = sniffImageMime(head)
+  if (!sig) return null
+  const base = String(file.name || 'image').replace(/\.[^.]+$/, '') || 'image'
+  const name = /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name || '') ? file.name : `${base}${sig.ext}`
+  return new File([file], name, { type: sig.mime })
 }
 
 export function isVideoFile(file) {
@@ -69,22 +130,16 @@ function parseUploadResponseUrl(data) {
   return null
 }
 
-/** Video uploads hit the API directly — Vite proxy often times out during Cloudinary processing. */
+/** Multipart uploads hit the API directly (same as apiRequest) — avoids Vite proxy drops/timeouts. */
 function multipartUploadUrl(path) {
   const normalized = path.startsWith('/') ? path : `/${path}`
-  const isVideo = /\/video\/file$/i.test(normalized)
   const base = apiBase()
-  if (isVideo) {
-    if (base) return `${base}${normalized}`
-    if (import.meta.env.DEV && typeof window !== 'undefined') {
-      const port = import.meta.env.VITE_API_PORT || '4001'
-      return `http://127.0.0.1:${port}${normalized}`
-    }
-  }
+  if (base) return `${base}${normalized}`
   if (import.meta.env.DEV && typeof window !== 'undefined') {
-    return normalized
+    const port = import.meta.env.VITE_API_PORT || '4001'
+    return `http://127.0.0.1:${port}${normalized}`
   }
-  return base ? `${base}${normalized}` : normalized
+  return normalized
 }
 
 /**
@@ -117,6 +172,7 @@ export function uploadStoreFileMultipart(path, file, { folder, onProgress, timeo
 
     xhr.open('POST', url)
     const token = getToken()
+    console.log('[Upload]', path, '→', url, token ? '(auth token set)' : '(NO auth token)')
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
 
     xhr.upload.onloadstart = () => report(8, 'send')
@@ -304,8 +360,11 @@ export async function uploadStoreImageFile(
     onProgress,
   } = {},
 ) {
-  if (!isImageFile(file)) throw new Error('File must be an image (JPG, PNG, or WEBP)')
-  const payload = await compressedImageFile(file, maxWidth, quality)
+  const normalized = (await normalizeImageFile(file)) || file
+  if (!isImageFile(normalized)) {
+    throw new Error('File must be an image (JPG, PNG, or WEBP). Rename with .jpg/.png if Windows hides the extension.')
+  }
+  const payload = await compressedImageFile(normalized, maxWidth, quality)
   return uploadStoreFileMultipart('/api/uploads/image/file', payload, { folder, onProgress })
 }
 
@@ -323,7 +382,10 @@ export async function uploadStoreImageFiles(
     onProgress,
   } = {},
 ) {
-  const list = Array.from(files || []).filter(isImageFile)
+  const raw = Array.from(files || [])
+  const list = (
+    await Promise.all(raw.map(async (f) => (await normalizeImageFile(f)) || (isImageFile(f) ? f : null)))
+  ).filter(Boolean)
   if (!list.length) return []
 
   const urls = []

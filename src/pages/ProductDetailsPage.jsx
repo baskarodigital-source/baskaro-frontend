@@ -4,14 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle, Play, Film } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getMobileModel, getOffers } from '../lib/api/baskaroApi.js'
-import { buildModelMediaGallery } from '../lib/productMedia.js'
-
-const CONDITION_GRADES = [
-   { id: 'Fair', label: 'Fair', desc: 'Noticeable signs of use' },
-   { id: 'Good', label: 'Good', desc: 'Minor signs of use' },
-   { id: 'Superb', label: 'Superb', desc: 'Like new condition' },
-]
+import { getMobileModel, getOffers, getInventory } from '../lib/api/baskaroApi.js'
+import { buildColorAwareMediaGallery, buildColorVariantMediaGallery } from '../lib/productMedia.js'
+import ProductColorSwatches from '../components/ProductColorSwatches.jsx'
+import { optimizeDeliveryUrl } from '../lib/optimizeImageUrl.js'
+import { normalizeColorVariants } from '../lib/colorVariants.js'
+import {
+  buildProductHighlights,
+  buildProductSpecLine,
+  buildModelConditionGrades,
+  conditionDisplayLabel,
+  normalizeOffersList,
+} from '../lib/productDetails.js'
 
 function specGroupsFromModel(model) {
    const spec = model?.specifications
@@ -52,9 +56,13 @@ export default function ProductDetailsPage() {
    const [loadErr, setLoadErr] = useState('')
    const [loading, setLoading] = useState(true)
    const [offers, setOffers] = useState([])
+   const [conditionGrades, setConditionGrades] = useState([])
+   const [conditionPrices, setConditionPrices] = useState({})
    const [selectedMedia, setSelectedMedia] = useState(0)
-   const [condition, setCondition] = useState('Superb')
+   const [selectedColorId, setSelectedColorId] = useState(null)
+   const [condition, setCondition] = useState('')
    const [extendedWarranty, setExtendedWarranty] = useState(false)
+   const [showAllOffers, setShowAllOffers] = useState(false)
    const [showAllSpecs, setShowAllSpecs] = useState(false)
    const [isAdding, setIsAdding] = useState(false)
    const { addToCart } = useCart()
@@ -66,16 +74,34 @@ export default function ProductDetailsPage() {
       setLoading(true)
       setLoadErr('')
       setOffers([])
+      setConditionGrades([])
+      setConditionPrices({})
+      setCondition('')
       ;(async () => {
          try {
             const m = await getMobileModel(id)
             if (!cancelled) setModel(m)
+            const modelId = m?._id || m?.id || id
             try {
-               const o = await getOffers({ modelId: m?._id || m?.id || id })
-               const list = Array.isArray(o?.data) ? o.data : Array.isArray(o) ? o : []
-               if (!cancelled) setOffers(Array.isArray(list) ? list : [])
+               const o = await getOffers({ modelId })
+               if (!cancelled) setOffers(normalizeOffersList(o))
             } catch {
                if (!cancelled) setOffers([])
+            }
+            try {
+               const inventory = await getInventory({ modelId, limit: 100 }).catch(() => null)
+               if (!cancelled) {
+                  const built = buildModelConditionGrades(m, inventory)
+                  setConditionGrades(built.grades)
+                  setConditionPrices(built.pricesByGrade)
+                  setCondition(built.defaultId)
+               }
+            } catch {
+               if (!cancelled) {
+                  const built = buildModelConditionGrades(m, null)
+                  setConditionGrades(built.grades)
+                  setCondition(built.defaultId)
+               }
             }
          } catch (e) {
             if (!cancelled) setLoadErr(e.message || 'Product not found')
@@ -89,33 +115,69 @@ export default function ProductDetailsPage() {
    const product = useMemo(() => {
       if (!model) return null
       const brandName = model.brandId?.name || '—'
-      const v0 = model.storageVariants?.[0]
-      const { media, images, videos } = buildModelMediaGallery(model)
-      const price = Number(model.basePrice) || 0
+      const { media, images, videos, colorVariants } = buildColorAwareMediaGallery(model)
+      const basePrice = Number(model.basePrice) || 0
+      const highlights = buildProductHighlights(model.specifications)
       return {
-         title: `${brandName} ${model.modelName} - Pre-Owned`,
+         title: `${brandName} ${model.modelName}`.trim(),
          brand: brandName,
          model: model.modelName,
-         specs: model.specifications?.display || '—',
-         ram: v0?.ram || '—',
-         storage: v0?.label || '—',
-         rating: 0,
-         reviews: 0,
-         price,
-         originalPrice: 0,
-         discount: 0,
-         emi: price > 0 ? Math.max(1, Math.round(price / 24)) : 0,
+         device: model.deviceId?.name || '',
+         specs: buildProductSpecLine(model.specifications),
+         rating: Number(model.rating) || 0,
+         reviews: Number(model.reviewCount) || 0,
+         basePrice,
+         originalPrice: Number(model.originalPrice) || 0,
+         discount: Number(model.discount) || 0,
          images,
          videos,
          media,
-         conditionGrades: CONDITION_GRADES,
          specGroups: specGroupsFromModel(model),
+         colorVariants,
+         highlights,
       }
    }, [model])
 
+   const conditionPrice = conditionPrices[condition]
+   const displayPrice = conditionPrice ?? product?.basePrice ?? 0
+   const displayCondition = conditionDisplayLabel(condition, conditionGrades)
+
+   const colorVariants = useMemo(
+      () => normalizeColorVariants(model?.colorVariants),
+      [model],
+   )
+
+   const activeColor = useMemo(() => {
+      if (!colorVariants.length) return null
+      if (selectedColorId != null) {
+         return colorVariants.find((c) => String(c.id) === String(selectedColorId)) || colorVariants[0]
+      }
+      return colorVariants[0]
+   }, [colorVariants, selectedColorId])
+
+   const activeColorMedia = useMemo(
+      () => (activeColor ? buildColorVariantMediaGallery(activeColor) : []),
+      [activeColor],
+   )
+
+   useEffect(() => {
+      setSelectedColorId(null)
+      setSelectedMedia(0)
+      setShowAllOffers(false)
+   }, [id])
+
    useEffect(() => {
       setSelectedMedia(0)
-   }, [id, product?.media?.length])
+   }, [activeColor?.id])
+
+   useEffect(() => {
+      colorVariants.forEach((c) => {
+         ;(c.images || []).forEach((url) => {
+            const img = new Image()
+            img.src = optimizeDeliveryUrl(url, { width: 960 })
+         })
+      })
+   }, [colorVariants])
 
    if (loading) {
       return (
@@ -133,21 +195,44 @@ export default function ProductDetailsPage() {
       )
    }
 
+   const hasColors = colorVariants.length > 0
+   const galleryMedia = hasColors ? activeColorMedia : product.media
+   const activeItem = galleryMedia[selectedMedia] || galleryMedia[0] || product.media[0]
+   const showThumbScroll = galleryMedia.length > 5
+
+   const displayImageUrl =
+      activeItem?.type === 'image'
+         ? activeItem.url
+         : activeColor?.image
+           ? optimizeDeliveryUrl(activeColor.image, { width: 960 })
+           : product.images[0]
+
+   const selectColor = (color) => {
+      if (!color) return
+      setSelectedColorId(color.id)
+      setSelectedMedia(0)
+   }
+
+   const selectMedia = (index) => {
+      setSelectedMedia(index)
+      const item = galleryMedia[index]
+      if (item?.colorId) setSelectedColorId(item.colorId)
+   }
+
+   const formatPrice = (p) => new Intl.NumberFormat('en-IN').format(p)
+
    const handleAddToCart = () => {
       setIsAdding(true)
       addToCart({
-         id: id,
-         name: product.title,
-         price: product.price.toLocaleString('en-IN'),
-         img: product.images[0]
+         id: `${id}-${condition || 'default'}`,
+         name: `${product.title}${displayCondition ? ` — ${displayCondition}` : ''}`,
+         price: displayPrice.toLocaleString('en-IN'),
+         img: displayImageUrl || product.images[0],
       })
       setTimeout(() => setIsAdding(false), 1500)
    }
 
-   const activeItem = product.media?.[selectedMedia] || product.media?.[0]
-   const showThumbScroll = (product.media?.length || 0) > 5
-
-   const formatPrice = (p) => new Intl.NumberFormat('en-IN').format(p)
+   const visibleOffers = showAllOffers ? offers : offers.slice(0, 3)
 
    return (
       <div className="min-h-screen bg-white font-['Inter'] pb-12">
@@ -169,37 +254,43 @@ export default function ProductDetailsPage() {
                {/* Left: Image Gallery — align start so column height follows media, not the tall right column */}
                <div className="flex w-full flex-col gap-4 lg:max-w-[480px]">
                   <div className="flex w-full flex-col md:flex-row md:items-start gap-2">
-                     {/* Thumbnails Sidebar */}
-                     <div className="order-2 md:order-1 flex md:flex-col gap-2">
-                        <div
-                           className={[
-                              'flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0',
-                              showThumbScroll ? 'md:overflow-y-auto md:max-h-[280px] md:pr-1' : 'md:overflow-visible'
-                           ].join(' ')}
-                        >
-                           {product.media.map((item, i) => (
-                              <button
-                                 key={`${item.type}-${item.url}`}
-                                 type="button"
-                                 onClick={() => setSelectedMedia(i)}
-                                 className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all p-0.5 ${selectedMedia === i ? 'border-red-600 shadow-sm' : 'border-slate-100'
-                                    }`}
-                                 aria-label={item.type === 'video' ? 'View product video' : 'View product image'}
-                              >
-                                 <img
-                                   src={item.type === 'video' ? item.poster || product.images[0] : item.url}
-                                   alt=""
-                                   className="h-full w-full object-cover"
-                                 />
-                                 {item.type === 'video' ? (
-                                   <span className="absolute inset-0 flex items-center justify-center bg-slate-900/35">
-                                     <Play size={14} className="text-white" fill="currentColor" />
-                                   </span>
-                                 ) : null}
-                              </button>
-                           ))}
+                     {/* Thumbnails — per-color images + videos when colors exist */}
+                     {galleryMedia.length > 1 ? (
+                        <div className="order-2 md:order-1 flex md:flex-col gap-2">
+                           <div
+                              className={[
+                                 'flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0',
+                                 showThumbScroll ? 'md:overflow-y-auto md:max-h-[280px] md:pr-1' : 'md:overflow-visible'
+                              ].join(' ')}
+                           >
+                              {galleryMedia.map((item, i) => (
+                                 <button
+                                    key={`${item.type}-${item.url}-${i}`}
+                                    type="button"
+                                    onClick={() => selectMedia(i)}
+                                    className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all p-0.5 ${selectedMedia === i ? 'border-red-600 shadow-sm' : 'border-slate-100'
+                                       }`}
+                                    aria-label={
+                                       item.type === 'video'
+                                          ? `View ${item.colorName || 'product'} video`
+                                          : `View ${item.colorName || 'product'} image`
+                                    }
+                                 >
+                                    <img
+                                      src={item.type === 'video' ? item.poster || displayImageUrl : item.url}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                    {item.type === 'video' ? (
+                                      <span className="absolute inset-0 flex items-center justify-center bg-slate-900/35">
+                                        <Play size={14} className="text-white" fill="currentColor" />
+                                      </span>
+                                    ) : null}
+                                 </button>
+                              ))}
+                           </div>
                         </div>
-                     </div>
+                     ) : null}
 
                      {/* Main Stage (Spotlight Gradient) — self-start + aspect: no extra vertical stretch beside long right column */}
                      <div className="order-1 md:order-2 relative w-full min-w-0 md:flex-1 md:max-w-none self-start rounded-3xl border border-slate-100 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_var(--tw-gradient-via)_45%,_var(--tw-gradient-to)_100%)] from-rose-50/50 via-white to-slate-50/80 overflow-hidden flex flex-col group aspect-[3/4] max-md:min-h-[320px] transition-all duration-700">
@@ -219,8 +310,8 @@ export default function ProductDetailsPage() {
                                  toggleWishlist({
                                     id,
                                     name: product.title,
-                                    price: formatPrice(product.price),
-                                    img: product.images[0],
+                                    price: formatPrice(displayPrice),
+                                    img: displayImageUrl || product.images[0],
                                  })
                               }
                               className={`flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm transition-colors active:scale-95 ${
@@ -258,13 +349,13 @@ export default function ProductDetailsPage() {
                                 </motion.div>
                               ) : (
                                 <motion.img
-                                  key={`img-${activeItem?.url || selectedMedia}`}
+                                  key={`img-${displayImageUrl}-${activeColor?.id || selectedMedia}`}
                                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                   animate={{ opacity: 1, scale: 1, y: 0 }}
                                   exit={{ opacity: 0, scale: 0.95, y: -10 }}
                                   transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                  src={activeItem?.url || product.images[0]}
-                                  alt={product.title}
+                                  src={displayImageUrl}
+                                  alt={activeColor ? `${product.title} — ${activeColor.name}` : product.title}
                                   className="h-full w-full max-h-full object-contain mix-blend-multiply drop-shadow-2xl"
                                 />
                               )}
@@ -396,7 +487,7 @@ export default function ProductDetailsPage() {
                         {product.title}
                      </h1>
                      <p className="text-[15px] font-semibold text-slate-500 mb-4 flex items-center flex-wrap gap-2">
-                        BASKARO Warranty, {condition}, {product.ram} / {product.storage}, {product.specs}
+                        BASKARO Warranty, {displayCondition}{activeColor ? `, ${activeColor.name}` : ''}{product.specs !== '—' ? `, ${product.specs}` : ''}
                      </p>
 
                      {(product.rating > 0 || product.reviews > 0) && (
@@ -414,7 +505,7 @@ export default function ProductDetailsPage() {
                   {/* Pricing Row */}
                   <div className="border-y border-slate-100 py-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 fill-mode-both">
                      <div className="flex items-end gap-3 mb-2 flex-wrap">
-                        <span className="text-4xl font-black text-slate-900 tracking-tighter">₹{formatPrice(product.price)}</span>
+                        <span className="text-4xl font-black text-slate-900 tracking-tighter">₹{formatPrice(displayPrice)}</span>
                         {product.originalPrice > 0 && product.discount > 0 && (
                            <>
                               <span className="text-[17px] font-bold text-slate-400 line-through mb-1">₹{formatPrice(product.originalPrice)}</span>
@@ -422,12 +513,6 @@ export default function ProductDetailsPage() {
                            </>
                         )}
                      </div>
-
-                     <div className="flex items-center gap-2 text-[15px] font-bold text-slate-900">
-                        <span className="text-slate-900 font-extrabold">₹{formatPrice(product.emi)}/month <span className="text-slate-500 font-bold">EMI available.</span></span>
-                        <button className="text-blue-600 hover:text-blue-700 font-black ml-1 transition-colors">View Plans</button>
-                     </div>
-                     <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-widest">Bajaj, Snapmint, Instacred EMI available</p>
                   </div>
 
                   {/* Condition Selection */}
@@ -445,12 +530,13 @@ export default function ProductDetailsPage() {
                         </div>
                      </div>
 
-                     <div className="flex gap-4">
-                        {product.conditionGrades.map((grade) => (
+                     <div className="flex flex-wrap gap-4">
+                        {conditionGrades.map((grade) => (
                            <button
                               key={grade.id}
+                              type="button"
                               onClick={() => setCondition(grade.id)}
-                              className={`flex-1 flex flex-col items-center justify-center py-3.5 px-4 rounded-2xl border-2 transition-all group overflow-hidden relative ${condition === grade.id
+                              className={`min-w-[100px] flex-1 flex flex-col items-center justify-center py-3.5 px-4 rounded-2xl border-2 transition-all group overflow-hidden relative ${condition === grade.id
                                     ? 'border-green-600 bg-white shadow-lg shadow-green-600/5 translate-y-[-2px]'
                                     : 'border-slate-100 hover:border-slate-200 bg-slate-50/50'
                                  }`}
@@ -458,6 +544,15 @@ export default function ProductDetailsPage() {
                               <span className={`text-[15px] font-black z-10 ${condition === grade.id ? 'text-green-700' : 'text-slate-700 font-bold'}`}>
                                  {grade.label}
                               </span>
+                              {grade.price ? (
+                                 <span className="relative z-10 mt-1 text-[11px] font-bold text-slate-500">
+                                    ₹{formatPrice(grade.price)}
+                                 </span>
+                              ) : grade.desc ? (
+                                 <span className="relative z-10 mt-1 text-[10px] font-semibold text-slate-400 text-center leading-tight px-1">
+                                    {grade.desc}
+                                 </span>
+                              ) : null}
                               {condition === grade.id && (
                                  <motion.div layoutId="condition-bg" className="absolute inset-0 bg-green-50 z-0" />
                               )}
@@ -494,23 +589,32 @@ export default function ProductDetailsPage() {
                      </div>
                   </div>
 
-                  {/* Storage row (as extra) */}
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-500 fill-mode-both">
-                     <h3 className="text-[15px] font-black uppercase tracking-tight mb-4">Storage</h3>
-                     <div className="flex gap-4">
-                        <button className="flex-1 py-1 px-4 rounded-xl border-2 border-slate-900 bg-white shadow-sm font-black text-slate-900 text-[13px]">
-                           256 GB
-                        </button>
+                  {hasColors ? (
+                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-500 fill-mode-both">
+                        <ProductColorSwatches
+                           colors={colorVariants}
+                           selectedId={activeColor?.id}
+                           onSelect={selectColor}
+                        />
                      </div>
-                  </div>
+                  ) : null}
+
                   {/* Available Offers */}
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-600 fill-mode-both">
                      <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[15px] font-black uppercase tracking-tight">Available Offers</h3>
-                        <button className="text-blue-600 text-[13px] font-bold hover:underline">View All</button>
+                        {offers.length > 3 ? (
+                           <button
+                              type="button"
+                              onClick={() => setShowAllOffers((v) => !v)}
+                              className="text-blue-600 text-[13px] font-bold hover:underline"
+                           >
+                              {showAllOffers ? 'Show less' : 'View All'}
+                           </button>
+                        ) : null}
                      </div>
                      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                        {(offers.length ? offers : []).map((offer, i) => (
+                        {visibleOffers.map((offer, i) => (
                            <div key={offer?._id || i} className="min-w-[240px] p-4 rounded-2xl border-2 border-slate-100 bg-slate-50/20 flex flex-col gap-2 relative overflow-hidden group hover:border-red-100 transition-colors">
                               <div className="flex items-center gap-2">
                                  <div className="h-2 w-2 rounded-full bg-red-600" />
@@ -532,22 +636,19 @@ export default function ProductDetailsPage() {
                   </div>
 
                   {/* Key Highlights (Specs) */}
+                  {product.highlights?.length > 0 ? (
                   <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-700 fill-mode-both pt-4">
                      <h3 className="text-[15px] font-black uppercase tracking-tight mb-4">Product Highlights</h3>
                      <div className="grid grid-cols-2 gap-4">
-                        {[
-                           { label: 'Display', value: '17.27 cm (6.8 Inch) Dynamic AMOLED' },
-                           { label: 'Camera', value: '200MP + 12MP + 10MP + 50MP' },
-                           { label: 'Processor', value: 'Snapdragon 8 Gen 4 (For Galaxy)' },
-                           { label: 'Battery', value: '5000 mAh with 45W Charging' }
-                        ].map((spec, i) => (
-                           <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        {product.highlights.map((spec, i) => (
+                           <div key={`${spec.label}-${i}`} className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{spec.label}</p>
                               <p className="text-[12px] font-extrabold text-slate-800 leading-tight">{spec.value}</p>
                            </div>
                         ))}
                      </div>
                   </div>
+                  ) : null}
                </div>
             </div>
 
@@ -619,63 +720,29 @@ export default function ProductDetailsPage() {
                   </AnimatePresence>
                </section>
 
-               {/* Ratings & Reviews */}
+               {/* Ratings & Reviews — only when product has review data */}
+               {(product.rating > 0 || product.reviews > 0) ? (
                <section className="bg-slate-50 rounded-[3rem] p-8 md:p-12">
                   <div className="grid gap-12 lg:grid-cols-3">
                      <div className="lg:col-span-1">
                         <h2 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tight">Ratings & Reviews</h2>
                         <div className="flex items-center gap-4 mb-4">
-                           <span className="text-5xl font-black text-slate-900">4.8</span>
+                           <span className="text-5xl font-black text-slate-900">{product.rating || '—'}</span>
                            <div className="flex flex-col">
                               <div className="flex text-amber-500">
-                                 {[...Array(5)].map((_, i) => <Star key={i} size={20} fill="currentColor" />)}
+                                 {[...Array(5)].map((_, i) => (
+                                   <Star key={i} size={20} fill={i < Math.round(product.rating) ? 'currentColor' : 'none'} />
+                                 ))}
                               </div>
-                              <span className="text-sm font-bold text-slate-400 mt-1">Based on 642 ratings</span>
+                              <span className="text-sm font-bold text-slate-400 mt-1">
+                                 Based on {product.reviews} rating{product.reviews === 1 ? '' : 's'}
+                              </span>
                            </div>
                         </div>
-                        <div className="space-y-2 mt-8">
-                           {[5, 4, 3, 2, 1].map((r) => (
-                              <div key={r} className="flex items-center gap-3">
-                                 <span className="text-xs font-black text-slate-600 w-4">{r}</span>
-                                 <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${r === 5 ? 85 : r === 4 ? 12 : 3}%` }} />
-                                 </div>
-                                 <span className="text-[10px] font-bold text-slate-400 w-8">{r === 5 ? '85%' : r === 4 ? '12%' : '3%'}</span>
-                              </div>
-                           ))}
-                        </div>
-                     </div>
-
-                     <div className="lg:col-span-2 space-y-8">
-                        {[
-                           { u: 'Amit Kumar', r: 5, t: 'Excellent condition!', d: 'The phone looks brand new. Not a single scratch. Very happy with the purchase.', date: 'Oct 12, 2025' },
-                           { u: 'Sneha Sharma', r: 5, t: 'Amazing processing speed', d: 'Fast delivery and the packaging was premium. Everything works perfectly.', date: 'Oct 05, 2025' }
-                        ].map((rev, i) => (
-                           <div key={i} className="pb-8 border-b border-slate-200 last:border-0">
-                              <div className="flex items-center justify-between mb-4">
-                                 <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center font-black text-slate-400 ring-2 ring-slate-100">
-                                       {rev.u[0]}
-                                    </div>
-                                    <div>
-                                       <p className="text-sm font-black text-slate-900 leading-none">{rev.u}</p>
-                                       <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{rev.date}</p>
-                                    </div>
-                                 </div>
-                                 <div className="flex text-amber-500 bg-white px-2 py-1 rounded-lg ring-1 ring-slate-200">
-                                    {[...Array(rev.r)].map((_, j) => <Star key={j} size={10} fill="currentColor" />)}
-                                 </div>
-                              </div>
-                              <h4 className="text-[15px] font-black text-slate-900 mb-2">{rev.t}</h4>
-                              <p className="text-[14px] font-medium text-slate-500 leading-relaxed">{rev.d}</p>
-                           </div>
-                        ))}
-                        <button className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-white font-black text-slate-900 text-[13px] uppercase tracking-widest hover:bg-slate-50 transition-colors">
-                           Read all 6 reviews
-                        </button>
                      </div>
                   </div>
                </section>
+               ) : null}
             </div>
          </div>
       </div>

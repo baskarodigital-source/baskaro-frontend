@@ -285,6 +285,10 @@ export async function postDeviceConditionCalculate(body) {
   return unwrap(await apiRequest('/api/device-condition/calculate', { method: 'POST', body }))
 }
 
+export async function getActiveDeviceConditions() {
+  return unwrap(await apiRequest('/api/device-condition/active'))
+}
+
 export async function getDeviceConditionByType(conditionType) {
   return unwrap(await apiRequest(`/api/device-condition/${encodeURIComponent(conditionType)}`))
 }

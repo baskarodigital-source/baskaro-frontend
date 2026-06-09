@@ -24,6 +24,7 @@ import {
   isLocalMediaUrl,
   isImageFile,
   isVideoFile,
+  normalizeImageFile,
 } from '../lib/storeImageUpload.js'
 
 const ACCEPT_ATTR =
@@ -264,21 +265,32 @@ export default function ProductMediaManager({
   const fileInputRef = useRef(null)
   const replaceRef = useRef(null)
   const replaceTargetRef = useRef(null)
+  const onChangeRef = useRef(onChange)
+  const onUploadingChangeRef = useRef(onUploadingChange)
+  const lastEmittedPayloadRef = useRef('')
 
-  const emitPayloadToParent = useCallback(
-    (nextItems) => {
-      const pending = nextItems.some((i) => i.uploading || isLocalMediaUrl(i.url))
-      if (pending) return false
-      const payload = derivePayload(nextItems)
-      const hasStrayLocal = [payload.image, ...payload.images, payload.video, ...payload.videos].some(
-        (u) => u && isLocalMediaUrl(u),
-      )
-      if (hasStrayLocal) return false
-      onChange?.(payload)
-      return true
-    },
-    [onChange],
-  )
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  useEffect(() => {
+    onUploadingChangeRef.current = onUploadingChange
+  }, [onUploadingChange])
+
+  const emitPayloadToParent = useCallback((nextItems) => {
+    const pending = nextItems.some((i) => i.uploading || isLocalMediaUrl(i.url))
+    if (pending) return false
+    const payload = derivePayload(nextItems)
+    const hasStrayLocal = [payload.image, ...payload.images, payload.video, ...payload.videos].some(
+      (u) => u && isLocalMediaUrl(u),
+    )
+    if (hasStrayLocal) return false
+    const sig = JSON.stringify(payload)
+    if (lastEmittedPayloadRef.current === sig) return true
+    lastEmittedPayloadRef.current = sig
+    onChangeRef.current?.(payload)
+    return true
+  }, [])
 
   const scheduleNotifyParent = useCallback(
     (nextItems) => {
@@ -305,9 +317,9 @@ export default function ProductMediaManager({
 
   useEffect(() => {
     const busy = uploading || items.some((i) => i.uploading)
-    onUploadingChange?.(busy)
+    onUploadingChangeRef.current?.(busy)
     if (!busy) emitPayloadToParent(items)
-  }, [uploading, items, onUploadingChange, emitPayloadToParent])
+  }, [uploading, items, emitPayloadToParent])
 
   const imageCount = useMemo(() => items.filter((i) => i.kind === 'image').length, [items])
   const videoCount = useMemo(() => items.filter((i) => i.kind === 'video').length, [items])
@@ -315,7 +327,11 @@ export default function ProductMediaManager({
 
   const processFiles = async (fileList, { replaceId } = {}) => {
     const raw = Array.from(fileList || [])
-    const imageFiles = raw.filter(isImageFile)
+    const imageFiles = (
+      await Promise.all(
+        raw.map(async (file) => (await normalizeImageFile(file)) || (isImageFile(file) ? file : null)),
+      )
+    ).filter(Boolean)
     const videoFiles = raw.filter(isVideoFile)
     const rejected = raw.length - imageFiles.length - videoFiles.length
 
