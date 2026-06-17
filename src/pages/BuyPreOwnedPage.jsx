@@ -1,12 +1,14 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ServicePageLayout } from '../components/ServicePageLayout'
 import { BuyPreOwnedLead } from '../components/BuyPreOwnedLead'
 import { useCatalogBrands } from '../hooks/useCatalogBrands'
-import { gPhoto } from '../constants/googleImages'
 import { useCart } from '../context/CartContext'
-
-import s25Front from '../assets/products/s25_titanium.jpg'
-import iphone14Front from '../assets/products/iphone14_purple.jpg'
+import { getFeaturedPreOwned } from '../lib/api/baskaroApi.js'
+import { appAlert } from '../lib/appDialog.js'
+import { isLoggedIn } from '../lib/auth.js'
+import { isMongoObjectId } from '../lib/objectId.js'
+import { mapFeaturedPreOwnedRow } from '../lib/mapPreOwnedProduct.js'
 
 const BRANDS_FALLBACK = ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Vivo', 'OPPO', 'Realme', 'Motorola']
 
@@ -37,15 +39,6 @@ const WHY_US = [
   'Fast doorstep delivery',
 ]
 
-const PRE_OWNED_PHONES = [
-  { id: 'po-iphone-14', name: 'Apple iPhone 14 (128GB) - Pre-Owned', price: '42,990', img: iphone14Front },
-  { id: 'po-s25-edge', name: 'Samsung Galaxy S25 Edge - Pre-Owned', price: '48,499', img: s25Front },
-  { id: 'po-oneplus', name: 'OnePlus Flagship - Pre-Owned', price: '35,999', img: gPhoto(2) },
-  { id: 'po-vivo-v', name: 'Vivo V Series - Pre-Owned', price: '28,999', img: gPhoto(3) },
-  { id: 'po-xiaomi', name: 'Xiaomi Premium Series - Pre-Owned', price: '31,499', img: gPhoto(4) },
-  { id: 'po-samsung-s', name: 'Samsung S Series - Pre-Owned', price: '39,999', img: gPhoto(5) },
-]
-
 const STORIES = [
   'I got a like-new phone at a much better price than retail.',
   'Device condition matched the listing exactly, and delivery was quick.',
@@ -59,13 +52,91 @@ const FAQS = [
   'Is EMI available on pre-owned phones?',
 ]
 
+function mapServiceLayoutItem(row) {
+  const mapped = mapFeaturedPreOwnedRow(row)
+  if (!mapped) return null
+  const numeric = Number(String(mapped.price).replace(/[^\d]/g, '')) || Number(row.priceInr) || 0
+  return {
+    id: mapped.id,
+    inventoryId: mapped.inventoryId,
+    name: mapped.title,
+    price: numeric > 0 ? numeric.toLocaleString('en-IN') : mapped.price.replace(/^₹/, ''),
+    img: mapped.image,
+    viewPath: mapped.viewPath,
+  }
+}
+
 export default function BuyPreOwnedPage() {
+  const navigate = useNavigate()
   const { addToCart } = useCart()
   const { brands: apiBrands, loading: brandsLoading } = useCatalogBrands()
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+
   const brands = useMemo(() => {
     if (brandsLoading) return []
     return apiBrands.length ? apiBrands : BRANDS_FALLBACK
   }, [brandsLoading, apiBrands])
+
+  useEffect(() => {
+    let cancelled = false
+    setProductsLoading(true)
+    getFeaturedPreOwned({ limit: 12 })
+      .then((list) => {
+        if (cancelled) return
+        const items = (Array.isArray(list) ? list : [])
+          .map(mapServiceLayoutItem)
+          .filter(Boolean)
+        setProducts(items)
+      })
+      .catch(() => {
+        if (!cancelled) setProducts([])
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleAddToCart = useCallback(
+    async (phone) => {
+      const inventoryId = phone.inventoryId || phone.id
+      if (!isMongoObjectId(inventoryId)) {
+        appAlert('This listing is not linked to live inventory yet. Use a device from the in-stock section.', {
+          title: 'Not available',
+          variant: 'error',
+        })
+        return
+      }
+
+      if (!isLoggedIn()) {
+        appAlert('Please log in to reserve and add pre-owned devices to your cart.', {
+          title: 'Login required',
+          variant: 'info',
+        })
+        navigate('/login', { state: { from: '/buy-pre-owned' } })
+        return
+      }
+
+      const result = await addToCart({
+        id: inventoryId,
+        inventoryId,
+        name: phone.name,
+        price: phone.price,
+        img: phone.img,
+      })
+
+      if (result?.error) {
+        appAlert(result.error, { title: 'Could not add to cart', variant: 'error' })
+        return
+      }
+
+      appAlert('Added to cart — reserved for 30 minutes.', { title: 'In your cart', variant: 'success' })
+    },
+    [addToCart, navigate],
+  )
 
   return (
     <>
@@ -85,20 +156,39 @@ export default function BuyPreOwnedPage() {
           howItWorks={HOW_IT_WORKS}
           whyUs={WHY_US}
           hotDealsTitle="Top pre-owned deals"
-          productsSection={{
-            title: 'Popular pre-owned devices',
-            priceLabel: 'From',
-            items: PRE_OWNED_PHONES,
-            viewAllHref: '#',
-          }}
+          productsSection={
+            products.length > 0
+              ? {
+                  title: 'In-stock pre-owned devices',
+                  priceLabel: 'Price',
+                  items: products,
+                  viewAllHref: '/buy-pre-owned/category/phones',
+                }
+              : productsLoading
+                ? {
+                    title: 'In-stock pre-owned devices',
+                    priceLabel: 'Price',
+                    items: [],
+                    viewAllHref: '/buy-pre-owned/category/phones',
+                  }
+                : null
+          }
           stories={STORIES}
           faqs={FAQS}
           downloadBannerSubtitle="Buy pre-owned | Compare models | Add to cart"
           productButtonLabel="Add to Cart"
-          onProductClick={(p) => addToCart(p)}
+          onProductClick={(p) => handleAddToCart(p)}
         />
+        {!productsLoading && products.length === 0 ? (
+          <div className="mx-auto max-w-7xl px-4 pb-12 text-center">
+            <p className="text-sm font-semibold text-slate-600">
+              No pre-owned units in stock right now. Add inventory in Admin or run{' '}
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">npm run seed:test-inventory</code> in{' '}
+              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">backend/</code>.
+            </p>
+          </div>
+        ) : null}
       </div>
     </>
   )
 }
-

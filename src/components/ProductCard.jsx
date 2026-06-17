@@ -3,6 +3,8 @@ import { Star, ShoppingCart, Check, Heart } from 'lucide-react'
 import { useState } from 'react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
+import { appAlert } from '../lib/appDialog.js'
+import { isMongoObjectId } from '../lib/objectId.js'
 
 const TAG_STYLES = [
   'bg-amber-50 text-amber-800 ring-amber-100',
@@ -52,6 +54,7 @@ function discountPriceLabel(discount) {
  */
 export function ProductCard({
   id,
+  inventoryId,
   image,
   title,
   price,
@@ -71,6 +74,8 @@ export function ProductCard({
   const [isAdding, setIsAdding] = useState(false)
   const wishlistKey = id || title
   const wishlisted = wishlistKey ? isWishlisted(wishlistKey) : false
+  const cartInventoryId = inventoryId || id
+  const canAddToCart = isMongoObjectId(cartInventoryId)
 
   const priceForWishlist = String(price || '')
     .replace(/₹/g, '')
@@ -184,22 +189,46 @@ export function ProductCard({
         </button>
         <button
           type="button"
-          disabled={isAdding}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsAdding(true);
-            addToCart({
-              id: id || title,
+          disabled={isAdding || !canAddToCart}
+          onClick={async (e) => {
+            e.stopPropagation()
+            if (!canAddToCart) {
+              appAlert('This demo listing is not connected to live inventory. Open Buy Pre-Owned for in-stock devices.', {
+                title: 'Not available',
+                variant: 'info',
+              })
+              if (viewPath) navigate(viewPath)
+              return
+            }
+            setIsAdding(true)
+            const result = await addToCart({
+              id: cartInventoryId,
+              inventoryId: cartInventoryId,
               name: title,
               price: price,
-              img: image
-            });
-            setTimeout(() => setIsAdding(false), 1500);
+              img: image,
+            })
+            setIsAdding(false)
+            if (result?.error === 'LOGIN_REQUIRED') {
+              appAlert('Please log in to reserve and add pre-owned devices to your cart.', {
+                title: 'Login required',
+                variant: 'info',
+              })
+              navigate('/login', { state: { from: viewPath || '/cart' } })
+              return
+            }
+            if (result?.error) {
+              appAlert(result.error, { title: 'Could not add to cart', variant: 'error' })
+              return
+            }
+            appAlert('Added to cart — reserved for 30 minutes.', { title: 'In your cart', variant: 'success' })
           }}
           className={`flex-1 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border transition-all duration-300 px-2 py-2.5 text-[13px] font-black uppercase tracking-tight ${
-            isAdding 
-            ? 'bg-green-600 border-green-600 text-white' 
-            : 'border-rose-600 bg-white text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'
+            !canAddToCart
+              ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+              : isAdding
+              ? 'bg-green-600 border-green-600 text-white'
+              : 'border-rose-600 bg-white text-rose-600 hover:bg-rose-600 hover:text-white shadow-sm'
           }`}
         >
           {isAdding ? (

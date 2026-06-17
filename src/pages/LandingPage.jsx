@@ -16,6 +16,7 @@ import {
   getHomeServices,
   resolveHomeServiceImageUrl,
 } from '../lib/api/baskaroApi.js'
+import { mapFeaturedPreOwnedRow, mapInventoryListingRow } from '../lib/mapPreOwnedProduct.js'
 
 /** Lightweight remote fallbacks — avoids bundling multi‑MB hero/promo PNGs on first load */
 const HERO_IMG_SELL =
@@ -55,17 +56,13 @@ const SERVICES_FALLBACK = [
 const NEARBY_STORE_IMAGE_URL =
   'https://img.freepik.com/premium-vector/shop-location-icon-3d-illustration-from-online-store-collection-creative-shop-location-3d-icon-web-design-templates-infographics-more_676904-843.jpg?semt=ais_incoming&w=740&q=80'
 
-const FIND_NEW_PHONE_IMAGE_URL =
-  'https://s3n.cashify.in/builder/4060695bca3447c2b7296aa5ba9ce827.webp'
+const FIND_NEW_PHONE_IMAGE_URL = '/hero/exchange.png'
 
-const BUY_PHONE_IMAGE_URL =
-  'https://s3n.cashify.in/builder/caa3a1efa51541a5aa37fd292790ea81.webp'
+const BUY_PHONE_IMAGE_URL = '/hero/buy.png'
 
-const SELL_PHONE_IMAGE_URL =
-  'https://s3ng.cashify.in/builder/81c3c74f0683463da548ae2cbe1fec28.webp?w=300'
+const SELL_PHONE_IMAGE_URL = '/hero/sell.png'
 
-const NEW_ACCESSORIES_IMAGE_URL =
-  'https://s3n.cashify.in/builder/75750a866d214239bf52a47ee57e6674.webp'
+const NEW_ACCESSORIES_IMAGE_URL = '/hero/accessories.png'
 
 const BUY_SMARTWATCHES_IMAGE_URL =
   'https://img.tatacliq.com/images/i10/437Wx649H/MP000000017249001_437Wx649H_202304181258383.jpeg'
@@ -857,19 +854,10 @@ function formatInrPlain(n) {
 }
 
 function mapFeaturedPreOwnedFromApi(row) {
-  const img = resolveHomeServiceImageUrl(row.imageUrl) || row.imageUrl || ''
-  return {
-    id: row.id,
-    image: img,
-    title: row.title || 'Pre-Owned Device',
-    price: formatInrPlain(row.priceInr),
-    originalPrice: row.originalPriceInr != null ? formatInrPlain(row.originalPriceInr) : undefined,
-    discount: row.discountPercent != null && row.discountPercent > 0 ? row.discountPercent : undefined,
-    rating: row.rating != null && row.rating !== '' ? row.rating : undefined,
-    tag: Array.isArray(row.tags) ? row.tags : [],
-    brand: 'BASKARO',
-    viewPath: row.viewPath || '',
-  }
+  const mapped = mapFeaturedPreOwnedRow(row)
+  if (!mapped) return null
+  const img = resolveHomeServiceImageUrl(mapped.image) || mapped.image || ''
+  return { ...mapped, image: img }
 }
 
 const PRE_OWNED_DEVICES_CAROUSEL = [
@@ -1298,8 +1286,7 @@ export default function LandingPage() {
 
   const buyPreOwnedCarouselProducts = useMemo(() => {
     if (featuredPreOwnedLoading) return []
-    if (featuredPreOwned.length > 0) return featuredPreOwned
-    return PRE_OWNED_DEVICES_CAROUSEL
+    return featuredPreOwned
   }, [featuredPreOwnedLoading, featuredPreOwned])
 
   useEffect(() => {
@@ -1347,7 +1334,7 @@ export default function LandingPage() {
 
         const featuredArr = Array.isArray(featuredList) ? featuredList : []
         setFeaturedPreOwned(
-          featuredArr.map(mapFeaturedPreOwnedFromApi).filter((p) => p.title && p.price && p.price !== '—'),
+          featuredArr.map(mapFeaturedPreOwnedFromApi).filter((p) => p && p.title && p.price && p.price !== '—'),
         )
 
         const bannerArr = Array.isArray(bannersList) ? bannersList : []
@@ -2097,6 +2084,7 @@ export default function LandingPage() {
       <CarouselSection
         title="Trending Electronics"
         viewAllText="View All"
+        viewAllHref="/buy-pre-owned"
         products={buyPreOwnedCarouselProducts}
         loading={featuredPreOwnedLoading}
       />

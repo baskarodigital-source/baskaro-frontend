@@ -4,15 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Smartphone, DollarSign, ShoppingCart,
   Truck, CreditCard, Package, Tag, ImageIcon, BarChart3,
-  ShieldAlert, LogOut, Menu, X, ChevronRight, Bell, Search,
+  ShieldAlert, LogOut, Menu, X, ChevronRight, Bell, Search, ShoppingBag,
 } from 'lucide-react'
 import { getToken, isAdminUser, logout } from '../lib/auth.js'
 
 import { PageSpinner } from '../components/PageSpinner.jsx'
 import UsersManagementView from './Admin/UsersManagementView.jsx'
 import AllCategoriesView from './Admin/AllCategoriesView.jsx'
+import CatalogBuilderView from './Admin/CatalogBuilderView.jsx'
 import ConditionPricingView from './Admin/ConditionPricingView.jsx'
 import OrdersManagementView from './Admin/OrdersManagementView.jsx'
+import BuyOrdersManagementView from './Admin/BuyOrdersManagementView.jsx'
 import PickupsManagementView from './Admin/PickupsManagementView.jsx'
 import PaymentsManagementView from './Admin/PaymentsManagementView.jsx'
 import InventoryManagementView from './Admin/InventoryManagementView.jsx'
@@ -31,13 +33,15 @@ const navSections = [
       { id: 'Dashboard', icon: LayoutDashboard, label: 'Dashboard' },
       { id: 'Users', icon: Users, label: 'User Management' },
       { id: 'Catalog', icon: Smartphone, label: 'All Categories' },
+      { id: 'CatalogBuilder', icon: Smartphone, label: 'Catalog Builder' },
       { id: 'Pricing', icon: DollarSign, label: 'Condition Pricing' },
     ],
   },
   {
     title: 'OPERATIONS',
     items: [
-      { id: 'Orders', icon: ShoppingCart, label: 'Order Management' },
+      { id: 'Orders', icon: ShoppingCart, label: 'Sell Orders' },
+      { id: 'BuyOrders', icon: ShoppingBag, label: 'Buy Orders' },
       { id: 'Pickups', icon: Truck, label: 'Pickup Management' },
       { id: 'Payments', icon: CreditCard, label: 'Payment Management' },
       { id: 'Inventory', icon: Package, label: 'Inventory' },
@@ -101,6 +105,7 @@ function SidebarNav({ tab, collapsed, onSelect, onLogout }) {
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState('Catalog')
+  const [catalogBuilderFocus, setCatalogBuilderFocus] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -141,8 +146,22 @@ export default function AdminDashboard() {
     navigate('/login')
   }
 
+  const openCatalogBuilder = (catalogCategoryId, section = 'categories') => {
+    setCatalogBuilderFocus(catalogCategoryId ? { categoryId: String(catalogCategoryId), section } : null)
+    setTab('CatalogBuilder')
+    setMobileSidebarOpen(false)
+    setMobileSearchOpen(false)
+  }
+
+  const openAllCategories = () => {
+    setTab('Catalog')
+    setMobileSidebarOpen(false)
+    setMobileSearchOpen(false)
+  }
+
   const selectTab = (id) => {
     setTab(id)
+    if (id !== 'CatalogBuilder') setCatalogBuilderFocus(null)
     setMobileSidebarOpen(false)
     setMobileSearchOpen(false)
   }
@@ -157,10 +176,20 @@ export default function AdminDashboard() {
         return <UsersManagementView />
       case 'Catalog':
         return <AllCategoriesView />
+      case 'CatalogBuilder':
+        return (
+          <CatalogBuilderView
+            focusCategoryId={catalogBuilderFocus?.categoryId || ''}
+            initialSection={catalogBuilderFocus?.section || 'categories'}
+            onOpenAllCategories={openAllCategories}
+          />
+        )
       case 'Pricing':
         return <ConditionPricingView />
       case 'Orders':
         return <OrdersManagementView />
+      case 'BuyOrders':
+        return <BuyOrdersManagementView />
       case 'Pickups':
         return <PickupsManagementView />
       case 'Payments':
@@ -284,7 +313,7 @@ export default function AdminDashboard() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input
                   type="search"
-                  placeholder="Search…"
+                  placeholder="Search..."
                   className="w-48 rounded-full bg-slate-50 py-2 pl-10 pr-4 text-sm outline-none ring-1 ring-slate-200 transition-all focus:bg-white focus:ring-blue-500/20 lg:w-72 xl:w-80"
                 />
               </div>
@@ -314,7 +343,7 @@ export default function AdminDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input
                     type="search"
-                    placeholder="Search orders, users, models…"
+                    placeholder="Search orders, users, models..."
                     className="w-full rounded-xl bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none ring-1 ring-slate-200 focus:bg-white focus:ring-blue-500/20"
                   />
                 </div>
@@ -346,3 +375,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+

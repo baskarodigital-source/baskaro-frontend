@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Trash2, Plus } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
 import ProductMediaManager from './ProductMediaManager.jsx'
@@ -129,7 +129,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
     )
   }, [editingModel?._id, editingModel?.id, category?.id, brand?.id, device?.id])
 
-  // Load color variants only when switching models — not when category/brand/device resolve
+  // Load color variants only when switching models â€” not when category/brand/device resolve
   useEffect(() => {
     if (!editingModel) {
       setColorVariantsDraft([])
@@ -140,31 +140,97 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
 
   useEffect(() => {
     let cancelled = false
+
+    function mapCatalogAttribute(attr) {
+      const code = String(attr?.code || attr?.name || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+      const type = attr?.type === 'select' || attr?.type === 'multiselect' ? 'dropdown' : (attr?.type || 'text')
+      return {
+        key: code,
+        name: attr?.name || code,
+        type,
+        required: Boolean(attr?.isRequired),
+        options: (Array.isArray(attr?.values) ? attr.values : [])
+          .map((opt) => opt?.label || opt?.value)
+          .filter(Boolean),
+        source: 'catalog',
+      }
+    }
+
+    async function resolveCatalogCategoryId() {
+      if (category?.catalogCategoryId) return String(category.catalogCategoryId)
+      const ribbonId = category?.id || formData.categoryId
+      if (!ribbonId) return ''
+      try {
+        const all = await api.getRibbonCategoriesAdmin()
+        const list = Array.isArray(all) ? all : []
+        const found = list.find((row) => String(row?._id || row?.id) === String(ribbonId))
+        return found?.catalogCategoryId ? String(found.catalogCategoryId) : ''
+      } catch {
+        return ''
+      }
+    }
+
     async function loadSpecs() {
       const deviceId = device?.id || formData.deviceId
-      setSpecs([])
       setFormError('')
       setSuccessMsg('')
-      if (!deviceId) return
+      if (!deviceId && !category?.id && !formData.categoryId) return
 
       setSpecsLoading(true)
       try {
-        const sRes = await api.getDeviceSpecifications(deviceId)
-        const list = Array.isArray(sRes) ? sRes : (Array.isArray(sRes?.data) ? sRes.data : [])
-        const normalized = list
+        const catalogCategoryId = await resolveCatalogCategoryId()
+        const ribbonCategoryId = category?.id || formData.categoryId
+        const [deviceRes, catalogAttrs, templateRes] = await Promise.all([
+          deviceId ? api.getDeviceSpecifications(deviceId).catch(() => []) : Promise.resolve([]),
+          catalogCategoryId
+            ? api.getAttributes({ categoryId: catalogCategoryId, includeInactive: 'false' }).catch(() => [])
+            : Promise.resolve([]),
+          ribbonCategoryId ? api.getSpecifications(ribbonCategoryId).catch(() => []) : Promise.resolve([]),
+        ])
+
+        const deviceList = (Array.isArray(deviceRes) ? deviceRes : (Array.isArray(deviceRes?.data) ? deviceRes.data : []))
           .map((s) => ({
             key: s.key || '',
             name: s.name || s.label || '',
             type: s.type || 'text',
             required: !!s.required,
             options: Array.isArray(s.options) ? s.options : [],
+            source: 'device',
           }))
           .filter((s) => s.key && s.name)
+
+        const catalogList = (Array.isArray(catalogAttrs) ? catalogAttrs : [])
+          .filter((attr) => !attr?.isVariantAxis && attr?.showOnProduct !== false)
+          .map(mapCatalogAttribute)
+          .filter((s) => s.key && s.name)
+
+        const templateList = (Array.isArray(templateRes) ? templateRes : [])
+          .map((s) => ({
+            key: s.key || '',
+            name: s.name || s.label || '',
+            type: s.type || 'text',
+            required: !!s.required,
+            options: Array.isArray(s.options) ? s.options : [],
+            source: 'template',
+          }))
+          .filter((s) => s.key && s.name)
+
+        const merged = [...deviceList]
+        for (const row of [...templateList, ...catalogList]) {
+          const idx = merged.findIndex((item) => item.key === row.key)
+          if (idx >= 0) merged[idx] = row
+          else merged.push(row)
+        }
+
         if (!cancelled) {
-          setSpecs(normalized)
+          setSpecs(merged)
           setSpecValues((prev) => {
             const next = { ...prev }
-            for (const sp of normalized) {
+            for (const sp of merged) {
               if (!(sp.key in next)) next[sp.key] = sp.type === 'boolean' ? false : ''
             }
             return next
@@ -178,7 +244,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
     }
     loadSpecs()
     return () => { cancelled = true }
-  }, [device?.id])
+  }, [device?.id, category?.id, category?.catalogCategoryId, formData.categoryId, formData.deviceId])
 
   useEffect(() => {
     let cancelled = false
@@ -404,13 +470,13 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Category</label>
                     <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700">
-                      {category?.name || '—'}
+                      {category?.name || 'â€”'}
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Brand</label>
                     <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700">
-                      {brand?.name || '—'}
+                      {brand?.name || 'â€”'}
                     </div>
                   </div>
                 </div>
@@ -418,7 +484,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Device</label>
                     <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700">
-                      {device?.name || '—'}
+                      {device?.name || 'â€”'}
                     </div>
                   </div>
                   <div />
@@ -435,8 +501,8 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                      />
                    </div>
                    <div className="relative">
-                     <label className="block text-sm font-bold text-slate-700 mb-1.5">Base Price (₹) <span className="text-red-500">*</span></label>
-                     <span className="absolute left-4 top-[38px] text-slate-400 font-bold">₹</span>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Base Price (INR) <span className="text-red-500">*</span></label>
+                    <span className="absolute left-4 top-[38px] text-slate-400 font-bold">Rs</span>
                      <input
                        type="number"
                        min="0"
@@ -444,7 +510,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                        placeholder="e.g. 45000"
                        value={formData.basePrice}
                        onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                       className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm font-black text-slate-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all"
+                       className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-black text-slate-800 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all"
                      />
                    </div>
                 </div>
@@ -520,11 +586,11 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                   </div>
                 ) : specsLoading ? (
                   <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 animate-pulse">
-                    Loading specifications…
+                    Loading specificationsâ€¦
                   </div>
                 ) : specs.length === 0 ? (
                   <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500">
-                    No specifications configured for this category.
+                    No specifications yet. Add attributes in <span className="font-bold text-slate-700">Catalog Builder â†’ Attributes</span> for this category (e.g. Storage, RAM as text fields).
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-5">
@@ -627,7 +693,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
 
                 {offersLoading ? (
                   <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm font-semibold text-slate-500 animate-pulse">
-                    Loading offers…
+                    Loading offersâ€¦
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -680,7 +746,7 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
                                 )
                               }
                               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all"
-                              placeholder="Flat ₹2000 Off on ICICI Bank Cards"
+                              placeholder="Flat Rs 2000 Off on ICICI Bank Cards"
                             />
                           </div>
 
@@ -760,9 +826,11 @@ export default function AddNewModelForm({ onCancel, category, brand, device, edi
             disabled={saving}
             className="px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black shadow-md shadow-blue-200 hover:bg-blue-700 transition disabled:opacity-60"
           >
-            {saving ? 'Saving…' : editingModel ? 'Update Product Details' : 'Publish Product Listing'}
+            {saving ? 'Savingâ€¦' : editingModel ? 'Update Product Details' : 'Publish Product Listing'}
           </button>
        </div>
     </div>
   )
 }
+
+

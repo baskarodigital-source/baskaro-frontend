@@ -91,7 +91,7 @@ export const MARKETPLACE_PORTAL_CONTENT = {
     brands: FIND_NEW_PHONE_BRAND_PORTALS,
     trendingItems: ['iPhone 16', 'Galaxy S25', 'Pixel 9', 'Nothing Phone (3)'],
   },
-  'Cashify Store': {
+  'Baskaro Store': {
     brands: STORE_BRAND_PORTALS,
     trendingItems: ['Gurugram', 'Connaught Place', 'Noida', 'Bengaluru'],
   },

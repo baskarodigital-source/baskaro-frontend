@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import * as api from '../lib/api/baskaroApi.js'
+import { CatalogShopProducts } from './CatalogShopProducts.jsx'
 
 function normalizeItems(res) {
   if (!res) return []
@@ -118,13 +119,20 @@ export function MarketplaceCatalog({ showIntro = true }) {
         {showIntro && (
           <div className="mb-8">
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Browse all <span className="text-red-600">brands</span> & models
+              Browse <span className="text-red-600">shop products</span>, brands & models
             </h2>
             <p className="mt-2 text-sm text-slate-500 font-medium max-w-2xl">
-              Select any brand to see its full model list. Use search to quickly find a model across all brands.
+              Shop products from Catalog Builder appear first. Select a brand below to browse phone models.
             </p>
           </div>
         )}
+
+        <CatalogShopProducts
+          ribbonCategoryId={categoryId}
+          searchQuery={query}
+          title={categoryId ? 'Products in this category' : 'All shop products'}
+          className="mb-8"
+        />
 
         <div className="relative mb-8 max-w-2xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -152,13 +160,9 @@ export function MarketplaceCatalog({ showIntro = true }) {
               ))}
             </div>
           </div>
-        ) : filteredBrands.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-slate-50" />
-            <p className="text-slate-500 font-bold">No matching brands/models.</p>
-          </div>
         ) : (
           <div className="space-y-8">
+            {filteredBrands.length > 0 ? (
             <section className="rounded-3xl border border-slate-100 bg-white p-6">
               <div className="flex items-center justify-between gap-4">
                 <h3 className="text-base font-black text-slate-900 uppercase tracking-widest">
@@ -194,6 +198,12 @@ export function MarketplaceCatalog({ showIntro = true }) {
                 ))}
               </div>
             </section>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center">
+                <p className="text-sm font-semibold text-slate-600">No brands linked to this category yet.</p>
+                <p className="mt-1 text-xs text-slate-400">Add brands in All Categories, or browse shop products above.</p>
+              </div>
+            )}
 
             {selectedBrand && (
               <section className="rounded-3xl border border-slate-100 bg-white overflow-hidden">

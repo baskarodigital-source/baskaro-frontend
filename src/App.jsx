@@ -1,6 +1,6 @@
 // Routes: admin uses shared /login (see LoginPage redirectTo), not a separate admin login page.
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { MainLayout } from './components/MainLayout'
 import { Button } from './components/Button'
 import { PageSpinner } from './components/PageSpinner'
@@ -39,6 +39,7 @@ const NearbyStoresPage = lazy(() => import('./pages/NearbyStoresPage'))
 const CartPage = lazy(() => import('./pages/CartPage'))
 const WishlistPage = lazy(() => import('./pages/WishlistPage'))
 const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'))
+const ShopProductPage = lazy(() => import('./pages/ShopProductPage'))
 const ViewDetailsPage = lazy(() => import('./pages/ViewDetailsPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
 const WarrantyPolicyPage = lazy(() => import('./pages/WarrantyPolicyPage'))
@@ -50,6 +51,16 @@ const InfoPage = lazy(() => import('./pages/InfoPage'))
 
 function LazyPage({ children }) {
   return <Suspense fallback={<PageSpinner />}>{children}</Suspense>
+}
+
+function ScrollToTopOnRouteChange() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname])
+
+  return null
 }
 
 function NotFoundPage() {
@@ -73,6 +84,7 @@ export default function App() {
       <CartProvider>
         <WishlistProvider>
           <BrowserRouter>
+          <ScrollToTopOnRouteChange />
           <Routes>
             <Route
               path="/admin"
@@ -309,6 +321,14 @@ export default function App() {
                       element={
                         <LazyPage>
                           <NearbyStoresPage />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="/shop/:productId"
+                      element={
+                        <LazyPage>
+                          <ShopProductPage />
                         </LazyPage>
                       }
                     />

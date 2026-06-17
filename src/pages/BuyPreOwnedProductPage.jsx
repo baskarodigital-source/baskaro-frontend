@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Heart,
   Share2,
@@ -19,7 +19,10 @@ import {
   Star,
 } from 'lucide-react'
 import { gPhoto } from '../constants/googleImages'
-import { getOffers } from '../lib/api/baskaroApi.js'
+import { getOffers, getInventoryById } from '../lib/api/baskaroApi.js'
+import { useCart } from '../context/CartContext'
+import { appAlert } from '../lib/appDialog.js'
+import { isLoggedIn } from '../lib/auth.js'
 
 function rupee(n) {
   return Number(n || 0).toLocaleString('en-IN')
@@ -211,26 +214,90 @@ function isMongoObjectId(value) {
 }
 
 export default function BuyPreOwnedProductPage() {
+  const navigate = useNavigate()
   const { productId } = useParams()
   const [searchParams] = useSearchParams()
   const modelIdFromQuery = searchParams.get('modelId') || ''
-  const name = searchParams.get('name') || 'Refurbished Device'
-  const img = searchParams.get('img') || gPhoto(0)
-  const rating = searchParams.get('rating') || '4.4'
-  const price = Number(searchParams.get('price') || 16099)
-  const mrp = Number(searchParams.get('mrp') || 33299)
+  const { addToCart } = useCart()
 
-  const gallery = [img, gPhoto(1), gPhoto(2), gPhoto(3)]
+  const [inventory, setInventory] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [adding, setAdding] = useState(false)
+
+  const name = inventory?.title || searchParams.get('name') || 'Refurbished Device'
+  const img = inventory?.imageUrl || searchParams.get('img') || gPhoto(0)
+  const rating = searchParams.get('rating') || '4.4'
+  const price = inventory?.price ?? Number(searchParams.get('price') || 16099)
+  const mrp = Number(searchParams.get('mrp') || Math.round(price * 1.12))
+
+  const gallery = inventory?.images?.length ? inventory.images : [img, gPhoto(1), gPhoto(2), gPhoto(3)]
   const [activeImg, setActiveImg] = useState(gallery[0])
-  const [condition, setCondition] = useState('Fair')
-  const [storage, setStorage] = useState('8GB / 128GB')
-  const [color, setColor] = useState('Sierra Black')
+  const condition = inventory?.conditionLabel || 'Fair'
   const [offers, setOffers] = useState([])
   const [offersLoading, setOffersLoading] = useState(true)
 
   const gradeContent = GRADE_EXPLAINED[condition] ?? GRADE_EXPLAINED.Fair
+  const discountPct = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0
+  const canPurchase = inventory?.available !== false && !inventory?.isSold
 
-  const discountPct = Math.round(((mrp - price) / mrp) * 100)
+  useEffect(() => {
+    if (!isMongoObjectId(productId)) {
+      setLoadError('Invalid product')
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    getInventoryById(productId)
+      .then((data) => {
+        if (cancelled) return
+        setInventory(data)
+        setLoadError('')
+        if (data?.imageUrl) setActiveImg(data.imageUrl)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setLoadError(err?.message || 'Could not load product')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [productId])
+
+  const handleAddToCart = useCallback(async () => {
+    if (!isLoggedIn()) {
+      appAlert('Please log in to add this device to your cart.', { title: 'Login required', variant: 'info' })
+      navigate('/login', { state: { from: window.location.pathname + window.location.search } })
+      return
+    }
+    if (!canPurchase) {
+      appAlert('This device is no longer available.', { variant: 'error' })
+      return
+    }
+    setAdding(true)
+    const result = await addToCart({
+      id: productId,
+      inventoryId: productId,
+      name,
+      price: String(price),
+      img,
+    })
+    setAdding(false)
+    if (result?.error) {
+      appAlert(result.error, { title: 'Could not add to cart', variant: 'error' })
+      return
+    }
+    appAlert('Added to cart — reserved for 30 minutes.', { title: 'In your cart', variant: 'success' })
+  }, [addToCart, canPurchase, img, name, navigate, price, productId])
+
+  const handleBuyNow = useCallback(async () => {
+    await handleAddToCart()
+    navigate('/cart')
+  }, [handleAddToCart, navigate])
 
   useEffect(() => {
     let cancelled = false
@@ -251,6 +318,25 @@ export default function BuyPreOwnedProductPage() {
       cancelled = true
     }
   }, [modelIdFromQuery, productId])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-sm font-semibold text-slate-500">
+        Loading product…
+      </div>
+    )
+  }
+
+  if (loadError && !inventory) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <p className="text-lg font-bold text-slate-900">{loadError}</p>
+        <Link to="/buy-pre-owned" className="mt-4 inline-block text-sm font-semibold text-red-600 hover:underline">
+          Back to pre-owned phones
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -288,7 +374,10 @@ export default function BuyPreOwnedProductPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h1 className="text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{name}</h1>
-                <p className="mt-1 text-sm font-semibold text-slate-500 sm:text-base">Baskaro Warranty, Fair, {storage}, {color}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-500 sm:text-base">
+                  Baskaro Warranty · {condition}
+                  {inventory?.availability === 'RESERVED' ? ' · Currently reserved' : ''}
+                </p>
               </div>
               <div className="flex items-center gap-3 text-slate-400">
                 <button className="rounded-full border p-2 hover:text-red-600"><Heart size={18} /></button>
@@ -308,71 +397,32 @@ export default function BuyPreOwnedProductPage() {
             </div>
 
             <div className="rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white">
-              Get it for ₹{rupee(price - 600)} with <span className="text-amber-400">GcLD</span>
+              Member price: ₹{rupee(Math.max(0, price - 600))}
             </div>
-            <p className="text-sm text-slate-700 sm:text-base">
-              ₹1,395/month EMI available.{' '}
-              <button type="button" className="font-semibold text-red-600 hover:text-red-700">
-                View Plans
-              </button>
-            </p>
+            <p className="text-sm text-slate-700 sm:text-base">₹1,395/month EMI available.</p>
 
             <div className="rounded-xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-semibold text-slate-900">
-                  Condition{' '}
-                  <button type="button" className="text-sm font-medium text-red-600 hover:text-red-700">
-                    Learn More
-                  </button>
-                </h2>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" defaultChecked className="h-4 w-4 accent-red-600" /> Show deals only
-                </label>
-              </div>
+              <h2 className="text-base font-semibold text-slate-900">This exact device</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Pre-owned units are unique — condition, price, and photos match this specific inventory item.
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {['Fair', 'Good', 'Superb'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCondition(c)}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${condition === c ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
-                  >
-                    {c}
-                  </button>
-                ))}
+                <span className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">
+                  Condition: {condition}
+                </span>
+                {inventory?.conditionGrade ? (
+                  <span className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-600">
+                    Grade: {inventory.conditionGrade}
+                  </span>
+                ) : null}
+                <span
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium ${canPurchase ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-500'}`}
+                >
+                  {canPurchase ? 'In stock — 1 unit' : 'Not available'}
+                </span>
               </div>
               <div className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">
                 All devices have a default 6 Months warranty out of the box
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">Storage</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {['12 GB / 256 GB', '8GB / 128GB'].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setStorage(s)}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium ${storage === s ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">Color: {color}</h3>
-              <div className="mt-2 flex gap-3">
-                {['Sierra Black', 'Blue'].map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className={`h-10 w-10 rounded-full border-2 ${color === c ? 'border-black' : 'border-slate-300'} ${c === 'Blue' ? 'bg-cyan-200' : 'bg-slate-900'}`}
-                    aria-label={c}
-                  />
-                ))}
               </div>
             </div>
 
@@ -476,9 +526,23 @@ export default function BuyPreOwnedProductPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2">
-              <button type="button" className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 px-3 text-slate-700"><ShoppingCart size={18} /></button>
-              <button type="button" className="h-11 rounded-lg border border-slate-300 px-6 text-sm font-semibold text-slate-800">Pay with EMI</button>
-              <button type="button" className="h-11 rounded-lg bg-black px-6 text-sm font-semibold text-white">Buy Now</button>
+              <button
+                type="button"
+                disabled={!canPurchase || adding}
+                onClick={handleAddToCart}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 disabled:opacity-50"
+              >
+                <ShoppingCart size={18} />
+                {adding ? 'Adding…' : 'Add to cart'}
+              </button>
+              <button
+                type="button"
+                disabled={!canPurchase || adding}
+                onClick={handleBuyNow}
+                className="h-11 rounded-lg bg-black px-6 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                Buy now
+              </button>
             </div>
           </div>
         </section>
@@ -516,14 +580,13 @@ export default function BuyPreOwnedProductPage() {
                   <span className="ymal-price tabular-nums">₹{item.price}</span>
                   <span className="text-[11px] font-normal text-slate-400 line-through">₹{item.mrp}</span>
                 </div>
-                <p className="mt-1.5 text-[11px] font-normal text-slate-600">₹16,267 with GcLD</p>
               </article>
             ))}
           </div>
         </section>
 
         <section className="mt-8 border-t border-slate-200 pt-6">
-          <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Cashify Trust</h2>
+          <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Baskaro Trust</h2>
           <div className="mt-4 flex gap-3 overflow-x-auto pb-1 scrollbar-hide sm:gap-4 lg:grid lg:grid-cols-6 lg:overflow-visible">
             {[
               { Icon: Smile, value: '50+ Lakh', label: 'Happy Customers' },
@@ -550,19 +613,17 @@ export default function BuyPreOwnedProductPage() {
         <section className="mt-8 border-t border-slate-200 pt-8">
           <h2 className="text-base font-semibold text-slate-900 sm:text-lg">Grade Explained</h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {(['Superb', 'Good', 'Fair']).map((g) => (
-              <button
+            {['Superb', 'Good', 'Fair'].map((g) => (
+              <span
                 key={g}
-                type="button"
-                onClick={() => setCondition(g)}
-                className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                   condition === g
                     ? 'border-red-500 bg-red-50/80 text-red-800'
-                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                    : 'border-slate-200 text-slate-400'
                 }`}
               >
                 {g}
-              </button>
+              </span>
             ))}
           </div>
 

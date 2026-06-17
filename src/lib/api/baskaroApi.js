@@ -1,5 +1,6 @@
 import { apiRequest, unwrap } from './client.js'
 import { optimizeDeliveryUrl } from '../optimizeImageUrl.js'
+import { getToken } from '../auth.js'
 
 // --- Health ---
 export async function getHealth() {
@@ -53,6 +54,85 @@ export async function patchRibbonCategory(id, body) {
 
 export async function deleteRibbonCategory(id) {
   return unwrap(await apiRequest(`/api/ribbon-categories/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+// --- Admin category builder (nested categories) ---
+export async function getCategories(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  const suffix = q ? `?${q}` : ''
+  return unwrap(await apiRequest(`/api/categories${suffix}`))
+}
+
+export async function getCatalogCategoryByRibbon(ribbonCategoryId) {
+  return unwrap(
+    await apiRequest(`/api/categories/by-ribbon/${encodeURIComponent(ribbonCategoryId)}`),
+  )
+}
+
+export async function postCategory(body) {
+  return unwrap(await apiRequest('/api/categories', { method: 'POST', body, auth: true }))
+}
+
+export async function patchCategory(id, body) {
+  return unwrap(await apiRequest(`/api/categories/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteCategory(id) {
+  return unwrap(await apiRequest(`/api/categories/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+/** Copy ribbon categories (All Categories) into catalog builder categories. */
+export async function postImportCategoriesFromRibbon() {
+  return unwrap(
+    await apiRequest('/api/categories/import-from-ribbon', { method: 'POST', auth: true }),
+  )
+}
+
+/** Alias: sync + link All Categories with Catalog Builder. */
+export async function postSyncCategoriesWithRibbon() {
+  return postImportCategoriesFromRibbon()
+}
+
+// --- Admin attribute builder (category-linked attributes) ---
+export async function getAttributes(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  const suffix = q ? `?${q}` : ''
+  return unwrap(await apiRequest(`/api/attributes${suffix}`))
+}
+
+export async function postAttribute(body) {
+  return unwrap(await apiRequest('/api/attributes', { method: 'POST', body, auth: true }))
+}
+
+export async function patchAttribute(id, body) {
+  return unwrap(await apiRequest(`/api/attributes/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteAttribute(id) {
+  return unwrap(await apiRequest(`/api/attributes/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
+}
+
+// --- Admin product builder (products + embedded variants) ---
+export async function getProducts(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  const suffix = q ? `?${q}` : ''
+  return unwrap(await apiRequest(`/api/products${suffix}`))
+}
+
+export async function getProductById(id) {
+  return unwrap(await apiRequest(`/api/products/${encodeURIComponent(id)}`))
+}
+
+export async function postProduct(body) {
+  return unwrap(await apiRequest('/api/products', { method: 'POST', body, auth: true }))
+}
+
+export async function patchProduct(id, body) {
+  return unwrap(await apiRequest(`/api/products/${encodeURIComponent(id)}`, { method: 'PATCH', body, auth: true }))
+}
+
+export async function deleteProduct(id) {
+  return unwrap(await apiRequest(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE', auth: true }))
 }
 
 // --- Auth ---
@@ -376,8 +456,80 @@ export async function getInventory(params) {
   return unwrap(await apiRequest(`/api/inventory?${q}`))
 }
 
-export async function getInventoryById(inventoryId) {
-  return unwrap(await apiRequest(`/api/inventory/${inventoryId}`))
+export async function getInventoryById(inventoryId, { auth } = {}) {
+  const useAuth = auth ?? Boolean(getToken())
+  return unwrap(await apiRequest(`/api/inventory/${inventoryId}`, { auth: useAuth }))
+}
+
+// --- Server cart (pre-owned buy flow) ---
+export async function getServerCart() {
+  return unwrap(await apiRequest('/api/cart', { auth: true }))
+}
+
+export async function addCartItem(inventoryId) {
+  return unwrap(await apiRequest('/api/cart/items', { method: 'POST', body: { inventoryId }, auth: true }))
+}
+
+export async function removeCartItem(inventoryId) {
+  return unwrap(await apiRequest(`/api/cart/items/${encodeURIComponent(inventoryId)}`, { method: 'DELETE', auth: true }))
+}
+
+export async function clearServerCart() {
+  return unwrap(await apiRequest('/api/cart', { method: 'DELETE', auth: true }))
+}
+
+// --- Buy orders ---
+export async function previewBuyTotals() {
+  return unwrap(await apiRequest('/api/orders/preview', { auth: true }))
+}
+
+export async function createBuyOrder(body) {
+  return unwrap(await apiRequest('/api/orders/buy', { method: 'POST', body, auth: true }))
+}
+
+export async function getMyBuyOrders() {
+  return unwrap(await apiRequest('/api/orders/buy', { auth: true }))
+}
+
+export async function getMyBuyOrder(orderId) {
+  return unwrap(await apiRequest(`/api/orders/buy/${encodeURIComponent(orderId)}`, { auth: true }))
+}
+
+// --- Admin buy orders (pre-owned checkout) ---
+export async function getAdminBuyOrders(params = {}) {
+  const q = new URLSearchParams(params).toString()
+  return unwrap(await apiRequest(`/api/admin/buy-orders?${q}`, { auth: true }))
+}
+
+export async function getAdminBuyOrder(orderId) {
+  return unwrap(await apiRequest(`/api/admin/buy-orders/${encodeURIComponent(orderId)}`, { auth: true }))
+}
+
+export async function patchAdminBuyOrderStatus(orderId, body) {
+  return unwrap(
+    await apiRequest(`/api/admin/buy-orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PATCH',
+      body,
+      auth: true,
+    }),
+  )
+}
+
+// --- Razorpay ---
+export async function getRazorpayConfig() {
+  return unwrap(await apiRequest('/api/payments/razorpay/config'))
+}
+
+export async function createRazorpayOrder(body) {
+  return unwrap(await apiRequest('/api/payments/razorpay/create-order', { method: 'POST', body, auth: true }))
+}
+
+export async function verifyRazorpayPayment(body) {
+  return unwrap(await apiRequest('/api/payments/razorpay/verify', { method: 'POST', body, auth: true }))
+}
+
+export async function mockCompletePayment(body) {
+  return unwrap(await apiRequest('/api/payments/razorpay/mock-complete', { method: 'POST', body, auth: true }))
 }
 
 export async function postInventory(body) {

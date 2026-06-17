@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Heart, Star } from 'lucide-react'
 import { gPhoto } from '../constants/googleImages'
 import { useWishlist } from '../context/WishlistContext'
+import { getInventory } from '../lib/api/baskaroApi.js'
+import { mapInventoryListingRow } from '../lib/mapPreOwnedProduct.js'
 
 const CATEGORY_TITLES = {
   phones: 'Refurbished phones',
@@ -186,6 +188,8 @@ export default function BuyPreOwnedExplorePage() {
   const { kind, slug } = useParams()
   const navigate = useNavigate()
   const { isWishlisted, toggleWishlist } = useWishlist()
+  const [apiProducts, setApiProducts] = useState([])
+  const [inventoryLoading, setInventoryLoading] = useState(true)
   const [introExpanded, setIntroExpanded] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [sortBy, setSortBy] = useState('featured')
@@ -232,10 +236,49 @@ export default function BuyPreOwnedExplorePage() {
   const introMore =
     ' Every unit is inspected, data-wiped, and backed by Baskaro support so you can buy with confidence.'
 
+  useEffect(() => {
+    let cancelled = false
+    setInventoryLoading(true)
+    getInventory({ page: 1, limit: 100, isSold: false })
+      .then((res) => {
+        if (cancelled) return
+        const items = (res?.items || []).map(mapInventoryListingRow).filter(Boolean)
+        setApiProducts(items)
+      })
+      .catch(() => {
+        if (!cancelled) setApiProducts([])
+      })
+      .finally(() => {
+        if (!cancelled) setInventoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const products = useMemo(() => {
     if (kind !== 'category' && kind !== 'brand') return []
-    return getListingProducts(kind, slug)
-  }, [kind, slug])
+
+    let list = [...apiProducts]
+
+    if (kind === 'brand') {
+      const needle = String(slug || '').toLowerCase()
+      list = list.filter(
+        (p) =>
+          p.brandSlug === needle ||
+          p.brandName === needle ||
+          (needle === 'more' ? true : p.brandName.includes(needle)),
+      )
+    }
+
+    if (filterInStock) {
+      list = list.filter((p) => p.stockLeft > 0)
+    }
+
+    list = list.filter((p) => p.price >= priceMin && p.price <= priceMax)
+
+    return list
+  }, [apiProducts, kind, slug, filterInStock, priceMin, priceMax])
 
   const sortedProducts = useMemo(() => {
     const list = [...products]
@@ -402,6 +445,15 @@ export default function BuyPreOwnedExplorePage() {
         </aside>
 
         <main className="min-w-0 flex-1 space-y-4">
+          {inventoryLoading ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-500">
+              Loading in-stock devices…
+            </div>
+          ) : sortedProducts.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600">
+              No matching devices in stock. Try another brand or check back soon.
+            </div>
+          ) : null}
           {sortedProducts.map((p) => {
             const offPct = Math.round(((p.mrp - p.price) / p.mrp) * 100)
             const wishlistId = `preowned-${kind}-${slug}-${p.id}`
@@ -411,7 +463,8 @@ export default function BuyPreOwnedExplorePage() {
                 key={p.id}
                 onClick={() =>
                   navigate(
-                    `/buy-pre-owned/product/${kind}/${slug}/${p.id}?name=${encodeURIComponent(p.name)}&img=${encodeURIComponent(p.img)}&rating=${encodeURIComponent(String(p.rating))}&price=${encodeURIComponent(String(p.price))}&mrp=${encodeURIComponent(String(p.mrp))}`,
+                    p.viewPath ||
+                      `/buy-pre-owned/product/${kind}/${slug}/${p.id}?name=${encodeURIComponent(p.name)}&img=${encodeURIComponent(p.img)}&rating=${encodeURIComponent(String(p.rating))}&price=${encodeURIComponent(String(p.price))}&mrp=${encodeURIComponent(String(p.mrp))}`,
                   )
                 }
                 className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:gap-6 sm:p-5"
@@ -470,7 +523,6 @@ export default function BuyPreOwnedExplorePage() {
                     <span className="text-sm font-semibold text-slate-400 line-through">₹{formatRupee(p.mrp)}</span>
                   </div>
                   <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5">
-                    <span className="text-xs font-black uppercase tracking-wide text-amber-800">Gold</span>
                     <span className="text-sm font-extrabold text-slate-900">₹{formatRupee(p.memberPrice)}</span>
                     <span className="text-xs font-semibold text-slate-600">member price</span>
                   </div>

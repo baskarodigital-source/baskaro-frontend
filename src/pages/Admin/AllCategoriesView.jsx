@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { appAlert, appConfirm } from '../../lib/appDialog.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -57,6 +57,7 @@ export default function AllCategoriesView() {
           path: cat.path || '/marketplace',
           imageUrl: cat.imageUrl || '',
           iconKey: cat.iconKey,
+          catalogCategoryId: cat.catalogCategoryId || '',
           icon: opt?.icon || LayoutGrid,
           color: opt?.color || 'text-slate-500',
           iconType: opt?.id || 'Smartphone',
@@ -258,12 +259,11 @@ export default function AllCategoriesView() {
                       category={cat} 
                       onClick={() => handleSelectCategory(cat)} 
                       onEdit={(e) => { e.stopPropagation(); setEditingCategory(cat); }}
-                      onDelete={(e) => { e.stopPropagation(); handleOnDeleteCategory(cat.id); }}
-                      busy={busyId === cat.id}
+                      onDelete={(e) => { e.stopPropagation(); handleOnDeleteCategory(cat.id); }}                      busy={busyId === cat.id}
                     />
                  ))}
                  {!loading && (
-                   <button onClick={() => setIsAddingCategory(true)} className="aspect-[4/5] group flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2.5rem] hover:bg-white hover:border-blue-400 transition-all hover:shadow-2xl hover:shadow-blue-50">
+                  <button onClick={() => setIsAddingCategory(true)} className="aspect-[4/5] group flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2.5rem] hover:bg-white hover:border-blue-400 transition-all hover:shadow-2xl hover:shadow-blue-50">
                      <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all mb-4 group-hover:scale-110">
                        <Plus size={32} />
                      </div>
@@ -362,12 +362,12 @@ function CategoryCard({ category, onClick, onEdit, onDelete, busy }) {
                {category.active ? 'Active' : 'Inactive'}
              </span>
           </div>
-          <div className="flex items-center justify-between mt-auto">
-             <span className="text-[10px] font-bold text-slate-300">{category.path || '/marketplace'}</span>
-             <div className="flex items-center gap-1 text-blue-600 font-bold text-xs group-hover:translate-x-1 transition-transform">
-                View Brands <ChevronRight size={14} strokeWidth={3} />
-             </div>
-          </div>
+         <div className="flex items-center justify-between mt-auto gap-2">
+            <span className="text-[10px] font-bold text-slate-300">{category.path || '/marketplace'}</span>
+            <div className="flex items-center gap-1 text-blue-600 font-bold text-xs group-hover:translate-x-1 transition-transform">
+               View Brands <ChevronRight size={14} strokeWidth={3} />
+            </div>
+         </div>
        </div>
        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
          <button
@@ -623,3 +623,4 @@ function EditCategoryModal({ category, onCancel, onSave }) {
     </div>
   );
 }
+
