@@ -164,6 +164,7 @@ export default function CartPage() {
               {cart.map((item) => {
                 const unitPrice = parsePrice(item.unitPriceInr ?? item.price)
                 const lineTotal = unitPrice * (item.quantity || 1)
+                const imageSrc = String(item.img || item.imageUrl || '').trim()
 
                 return (
                   <motion.div
@@ -175,7 +176,15 @@ export default function CartPage() {
                     className="relative flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:gap-6 sm:rounded-3xl sm:p-5"
                   >
                     <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-100 p-1.5 sm:h-28 sm:w-28 sm:rounded-2xl sm:p-2">
-                      <img src={item.img || item.imageUrl} alt={item.name} className="h-full w-full object-contain" />
+                      {imageSrc ? (
+                        <img
+                          src={imageSrc}
+                          alt={item.name || item.title || 'Product'}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <ShoppingBag size={28} className="text-slate-400" aria-hidden />
+                      )}
                     </div>
 
                     <div className="min-w-0 flex-1">

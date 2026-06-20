@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, ChevronRight, ChevronLeft, ShieldCheck, Heart, Share2, Info, Check, ShoppingCart, PlusCircle, Play, Film } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
-import { getMobileModel, getOffers, getInventory } from '../lib/api/baskaroApi.js'
+import { resolveProductDetails, getOffers, getInventory } from '../lib/api/baskaroApi.js'
 import { buildColorAwareMediaGallery, buildColorVariantMediaGallery } from '../lib/productMedia.js'
 import ProductColorSwatches from '../components/ProductColorSwatches.jsx'
 import { optimizeDeliveryUrl } from '../lib/optimizeImageUrl.js'
 import { normalizeColorVariants } from '../lib/colorVariants.js'
+import { formatCatalogInr, pickCatalogImage, pickCatalogVariant } from '../lib/mapCatalogProduct.js'
+import { appAlert } from '../lib/appDialog.js'
 import {
   buildProductHighlights,
   buildProductSpecLine,
@@ -16,6 +18,7 @@ import {
   conditionDisplayLabel,
   normalizeOffersList,
 } from '../lib/productDetails.js'
+import { normalizeModelConditionGrades } from '../lib/modelConditionGrades.js'
 
 function specGroupsFromModel(model) {
    const spec = model?.specifications
@@ -50,9 +53,29 @@ function specGroupsFromModel(model) {
    return [{ label: 'Specifications', specs: pairs }]
 }
 
+function formatCatalogAttributeValue(value) {
+   if (value == null || value === '') return '—'
+   if (Array.isArray(value)) {
+      if (!value.length) return '—'
+      if (typeof value[0] === 'object') {
+         return `${value.length} file${value.length === 1 ? '' : 's'}`
+      }
+      return value.join(', ')
+   }
+   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+   return String(value)
+}
+
 export default function ProductDetailsPage() {
    const { id } = useParams()
+   const location = useLocation()
+   const productKindHint = location.state?.itemType === 'catalog'
+      ? 'catalog'
+      : location.state?.itemType === 'model' || location.state?.modelId
+         ? 'model'
+         : 'auto'
    const [model, setModel] = useState(null)
+   const [catalogProduct, setCatalogProduct] = useState(null)
    const [loadErr, setLoadErr] = useState('')
    const [loading, setLoading] = useState(true)
    const [offers, setOffers] = useState([])
@@ -77,10 +100,38 @@ export default function ProductDetailsPage() {
       setConditionGrades([])
       setConditionPrices({})
       setCondition('')
+      setCatalogProduct(null)
       ;(async () => {
          try {
-            const m = await getMobileModel(id)
-            if (!cancelled) setModel(m)
+            const resolved = await resolveProductDetails(id, { kind: productKindHint })
+            if (cancelled) return
+
+            if (resolved.kind === 'catalog') {
+               const catalog = resolved.data
+               setCatalogProduct(catalog)
+               setModel(null)
+               setLoadErr('')
+               try {
+                  const o = await getOffers({ productId: catalog?._id || catalog?.id || id })
+                  if (!cancelled) setOffers(normalizeOffersList(o))
+               } catch {
+                  if (!cancelled) setOffers([])
+               }
+               const grades = normalizeModelConditionGrades(catalog?.conditionGrades)
+               setConditionGrades(
+                  grades.map((label) => ({
+                     id: label,
+                     label,
+                     apiType: label,
+                  })),
+               )
+               setCondition(grades[0] || '')
+               return
+            }
+
+            const m = resolved.data
+            setModel(m)
+            setCatalogProduct(null)
             const modelId = m?._id || m?.id || id
             try {
                const o = await getOffers({ modelId })
@@ -110,7 +161,7 @@ export default function ProductDetailsPage() {
          }
       })()
       return () => { cancelled = true }
-   }, [id])
+   }, [id, productKindHint])
 
    const product = useMemo(() => {
       if (!model) return null
@@ -137,6 +188,49 @@ export default function ProductDetailsPage() {
          highlights,
       }
    }, [model])
+
+   const catalogView = useMemo(() => {
+      if (!catalogProduct) return null
+      const variant = pickCatalogVariant(catalogProduct)
+      const image = pickCatalogImage(catalogProduct, variant)
+      const price = Number(variant?.price)
+      const compareAt = Number(variant?.compareAtPrice)
+      const hasCompare = Number.isFinite(compareAt) && compareAt > price
+      const brandName =
+         (catalogProduct?.brandId && typeof catalogProduct.brandId === 'object'
+            ? catalogProduct.brandId.name
+            : '') ||
+         catalogProduct?.brand ||
+         ''
+      const deviceName =
+         catalogProduct?.deviceId && typeof catalogProduct.deviceId === 'object'
+            ? catalogProduct.deviceId.name
+            : ''
+      return {
+         title: catalogProduct.name || 'Product',
+         subtitle: [brandName, deviceName].filter(Boolean).join(' · '),
+         variantTitle: variant?.title || '',
+         image:
+            image ||
+            'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=800&auto=format&fit=crop',
+         price,
+         compareAt: hasCompare ? compareAt : null,
+         condition: variant?.condition || '',
+         stock: Number(variant?.stock) || 0,
+         description: catalogProduct?.description || catalogProduct?.shortDescription || '',
+         attributes: Array.isArray(catalogProduct?.attributes) ? catalogProduct.attributes : [],
+         specifications:
+            catalogProduct?.specifications && typeof catalogProduct.specifications === 'object'
+               ? catalogProduct.specifications
+               : {},
+         specGroups: specGroupsFromModel({ specifications: catalogProduct?.specifications }),
+         highlights: buildProductHighlights(catalogProduct?.specifications),
+         colorVariants: normalizeColorVariants(catalogProduct?.colorVariants),
+         conditionGrades: normalizeModelConditionGrades(catalogProduct?.conditionGrades),
+         productId: String(catalogProduct?._id || catalogProduct?.id || id),
+         variantId: String(variant?._id || variant?.id || ''),
+      }
+   }, [catalogProduct, id])
 
    const conditionPrice = conditionPrices[condition]
    const displayPrice = conditionPrice ?? product?.basePrice ?? 0
@@ -186,11 +280,251 @@ export default function ProductDetailsPage() {
          </div>
       )
    }
-   if (loadErr || !product) {
+   if (loadErr || (!product && !catalogView)) {
       return (
          <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 font-['Inter'] px-4">
             <p className="text-slate-800 font-bold text-center">{loadErr || 'Product not found'}</p>
-            <Link to="/buy-pre-owned" className="text-red-600 font-bold hover:underline">Back to Buy Pre-Owned</Link>
+            <Link to="/marketplace" className="text-red-600 font-bold hover:underline">Back to Marketplace</Link>
+         </div>
+      )
+   }
+
+   const handleAddToCart = async (redirectToCart = false) => {
+      setIsAdding(true)
+      try {
+         if (catalogView) {
+            const result = await addToCart({
+               productId: catalogView.productId,
+               variantId: catalogView.variantId || undefined,
+               itemType: 'catalog',
+               name: catalogView.title,
+               price: formatCatalogInr(catalogView.price),
+               img: catalogView.image,
+            })
+            if (result?.error === 'LOGIN_REQUIRED') {
+               appAlert('Please log in to add products to your cart.', {
+                  title: 'Login required',
+                  variant: 'info',
+               })
+               navigate('/login', { state: { from: `/product/${id}` } })
+               return
+            }
+            if (result?.error) {
+               appAlert(result.error, { title: 'Could not add to cart', variant: 'error' })
+               return
+            }
+            if (redirectToCart) navigate('/cart')
+            return
+         }
+
+         addToCart({
+            id: `${id}-${condition || 'default'}`,
+            name: `${product.title}${displayCondition ? ` — ${displayCondition}` : ''}`,
+            price: displayPrice.toLocaleString('en-IN'),
+            img: displayImageUrl || product.images[0],
+         })
+         if (redirectToCart) navigate('/cart')
+      } finally {
+         setTimeout(() => setIsAdding(false), 1500)
+      }
+   }
+
+   if (catalogView) {
+      const catalogColors = catalogView.colorVariants || []
+      const catalogActiveColor =
+         catalogColors.find((c) => String(c.id) === String(selectedColorId)) || catalogColors[0] || null
+      const catalogImage = catalogActiveColor?.image || catalogView.image
+      const catalogOffers = showAllOffers ? offers : offers.slice(0, 3)
+
+      return (
+         <div className="min-h-screen bg-white font-['Inter'] pb-12">
+            <div className="mx-auto max-w-7xl px-4 py-0 sm:px-6 lg:px-8">
+               <nav className="mb-2 flex items-center gap-2 text-[12px] font-medium text-slate-500 overflow-x-auto whitespace-nowrap scrollbar-hide py-1">
+                  <Link to="/" className="hover:text-red-600">Home</Link>
+                  <ChevronRight size={14} className="shrink-0" />
+                  <Link to="/marketplace" className="hover:text-red-600">Marketplace</Link>
+                  <ChevronRight size={14} className="shrink-0" />
+                  <span className="text-slate-900 truncate">{catalogView.title}</span>
+               </nav>
+
+               <div className="grid gap-6 lg:grid-cols-[480px_1fr] lg:items-start">
+                  <div className="flex w-full flex-col gap-4 lg:max-w-[480px]">
+                     <div className="relative w-full self-start overflow-hidden rounded-3xl border border-slate-100 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_var(--tw-gradient-via)_45%,_var(--tw-gradient-to)_100%)] from-rose-50/50 via-white to-slate-50/80">
+                        <div className="flex min-h-[320px] items-center justify-center p-6">
+                           <img
+                              src={catalogImage}
+                              alt={catalogView.title}
+                              className="max-h-[420px] w-full object-contain mix-blend-multiply drop-shadow-2xl"
+                           />
+                        </div>
+                        <div className="grid shrink-0 grid-cols-2 border-t border-slate-100 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                           <button
+                              type="button"
+                              onClick={() => handleAddToCart(false)}
+                              disabled={isAdding || catalogView.stock <= 0}
+                              className={`flex flex-col items-center justify-center border-r py-3 transition-all outline-none active:scale-95 ${
+                                 isAdding ? 'border-green-100 bg-green-50' : 'border-rose-100 bg-rose-50/50 hover:bg-rose-100/50'
+                              }`}
+                           >
+                              {isAdding ? (
+                                 <>
+                                    <Check className="text-green-600" size={18} />
+                                    <span className="mt-0.5 text-[10px] font-bold uppercase leading-none tracking-widest text-green-600">Added!</span>
+                                 </>
+                              ) : (
+                                 <>
+                                    <ShoppingCart className="mb-0.5 text-rose-600" size={18} />
+                                    <span className="text-[13px] font-black leading-none text-slate-900">Add to Cart</span>
+                                 </>
+                              )}
+                           </button>
+                           <button
+                              type="button"
+                              onClick={() => handleAddToCart(true)}
+                              disabled={isAdding || catalogView.stock <= 0}
+                              className="bg-slate-900 py-3 text-[14px] font-black uppercase tracking-[0.1em] text-white outline-none transition-all hover:bg-black active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                           >
+                              Buy Now
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                     {catalogView.subtitle ? (
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{catalogView.subtitle}</p>
+                     ) : null}
+                     <h1 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">{catalogView.title}</h1>
+                     {catalogView.variantTitle ? (
+                        <p className="text-sm font-medium text-slate-600">{catalogView.variantTitle}</p>
+                     ) : null}
+
+                     <div className="flex flex-wrap items-baseline gap-3 border-y border-slate-100 py-6">
+                        <span className="text-4xl font-black tracking-tighter text-slate-900">
+                           {formatCatalogInr(catalogView.price)}
+                        </span>
+                        {catalogView.compareAt != null ? (
+                           <span className="text-lg font-medium text-slate-400 line-through">
+                              {formatCatalogInr(catalogView.compareAt)}
+                           </span>
+                        ) : null}
+                     </div>
+
+                     <div className="flex flex-wrap gap-3 text-sm">
+                        {catalogView.condition ? (
+                           <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                              {catalogView.condition}
+                           </span>
+                        ) : null}
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+                           {catalogView.stock > 0 ? `${catalogView.stock} in stock` : 'Out of stock'}
+                        </span>
+                     </div>
+
+                     {catalogView.conditionGrades?.length > 0 ? (
+                        <div>
+                           <h3 className="mb-3 text-sm font-black uppercase tracking-tight text-slate-900">Condition</h3>
+                           <div className="flex flex-wrap gap-3">
+                              {catalogView.conditionGrades.map((grade) => (
+                                 <button
+                                    key={grade}
+                                    type="button"
+                                    onClick={() => setCondition(grade)}
+                                    className={`min-w-[100px] rounded-2xl border-2 px-4 py-3 text-sm font-black transition ${
+                                       condition === grade
+                                          ? 'border-green-600 bg-green-50 text-green-800'
+                                          : 'border-slate-100 bg-slate-50 text-slate-600'
+                                    }`}
+                                 >
+                                    {grade}
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
+                     ) : null}
+
+                     {catalogColors.length > 0 ? (
+                        <ProductColorSwatches
+                           colors={catalogColors}
+                           selectedId={catalogActiveColor?.id}
+                           onSelect={(color) => setSelectedColorId(color?.id)}
+                        />
+                     ) : null}
+
+                     {catalogView.attributes.length > 0 ? (
+                        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                           <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Details</h2>
+                           <dl className="mt-3 space-y-2">
+                              {catalogView.attributes.map((row, idx) => (
+                                 <div key={`${row?.attributeId || idx}`} className="flex justify-between gap-4 text-sm">
+                                    <dt className="font-medium text-slate-500">{row?.name || row?.code || 'Attribute'}</dt>
+                                    <dd className="text-right font-semibold text-slate-800">
+                                       {formatCatalogAttributeValue(row?.value)}
+                                    </dd>
+                                 </div>
+                              ))}
+                           </dl>
+                        </div>
+                     ) : null}
+
+                     {catalogView.specGroups?.[0]?.specs?.length > 0 ? (
+                        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                           <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Technical Specifications</h2>
+                           <dl className="mt-3 space-y-2">
+                              {catalogView.specGroups[0].specs.map((row, idx) => (
+                                 <div key={`${row.k}-${idx}`} className="flex justify-between gap-4 text-sm">
+                                    <dt className="font-medium text-slate-500">{row.k}</dt>
+                                    <dd className="text-right font-semibold text-slate-800">{row.v}</dd>
+                                 </div>
+                              ))}
+                           </dl>
+                        </div>
+                     ) : null}
+
+                     {offers.length > 0 ? (
+                        <div>
+                           <div className="mb-3 flex items-center justify-between">
+                              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Available Offers</h3>
+                              {offers.length > 3 ? (
+                                 <button
+                                    type="button"
+                                    onClick={() => setShowAllOffers((v) => !v)}
+                                    className="text-xs font-bold text-blue-600 hover:underline"
+                                 >
+                                    {showAllOffers ? 'Show less' : 'View All'}
+                                 </button>
+                              ) : null}
+                           </div>
+                           <div className="flex gap-4 overflow-x-auto pb-2">
+                              {catalogOffers.map((offer, i) => (
+                                 <div key={offer?._id || i} className="min-w-[220px] rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-900">{offer.title}</p>
+                                    <p className="mt-2 text-sm font-semibold text-slate-600">{offer.desc}</p>
+                                    {offer.code ? (
+                                       <p className="mt-2 font-mono text-xs font-bold text-slate-400">{offer.code}</p>
+                                    ) : null}
+                                 </div>
+                              ))}
+                           </div>
+                        </div>
+                     ) : null}
+
+                     {catalogView.description ? (
+                        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                           <h2 className="text-sm font-black uppercase tracking-widest text-slate-800">Description</h2>
+                           <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                              {catalogView.description}
+                           </p>
+                        </div>
+                     ) : null}
+
+                     <div className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm text-slate-600">
+                        <ShieldCheck size={18} className="text-emerald-600" />
+                        Quality-checked product listed from Baskaro Catalog Builder
+                     </div>
+                  </div>
+               </div>
+            </div>
          </div>
       )
    }
@@ -220,17 +554,6 @@ export default function ProductDetailsPage() {
    }
 
    const formatPrice = (p) => new Intl.NumberFormat('en-IN').format(p)
-
-   const handleAddToCart = () => {
-      setIsAdding(true)
-      addToCart({
-         id: `${id}-${condition || 'default'}`,
-         name: `${product.title}${displayCondition ? ` — ${displayCondition}` : ''}`,
-         price: displayPrice.toLocaleString('en-IN'),
-         img: displayImageUrl || product.images[0],
-      })
-      setTimeout(() => setIsAdding(false), 1500)
-   }
 
    const visibleOffers = showAllOffers ? offers : offers.slice(0, 3)
 
@@ -371,7 +694,7 @@ export default function ProductDetailsPage() {
                         <div className="grid shrink-0 grid-cols-2 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                            <button 
                               type="button" 
-                              onClick={handleAddToCart}
+                              onClick={() => handleAddToCart(false)}
                               disabled={isAdding}
                               className={`flex flex-col items-center justify-center py-3 border-r transition-all group active:scale-95 outline-none ${isAdding ? 'bg-green-50 border-green-100' : 'border-rose-100 bg-rose-50/50 hover:bg-rose-100/50'}`}
                            >
@@ -389,10 +712,7 @@ export default function ProductDetailsPage() {
                            </button>
                            <button 
                               type="button" 
-                              onClick={() => {
-                                 handleAddToCart();
-                                 navigate('/cart');
-                              }}
+                              onClick={() => handleAddToCart(true)}
                               className="py-3 bg-slate-900 text-white font-black text-[14px] uppercase tracking-[0.1em] hover:bg-black active:scale-95 transition-all outline-none"
                            >
                               Buy Now

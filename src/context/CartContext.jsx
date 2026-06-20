@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { isLoggedIn } from '../lib/auth.js'
+import { isLoggedIn, logout } from '../lib/auth.js'
 import {
   addCartItem as apiAddCartItem,
   getServerCart,
@@ -10,8 +10,11 @@ const CartContext = createContext()
 
 function mapServerItems(items) {
   return (items || []).map((item) => ({
-    id: item.inventoryId || item.id,
-    inventoryId: item.inventoryId || item.id,
+    id: item.id || item.inventoryId || item.productId,
+    inventoryId: item.inventoryId || null,
+    productId: item.productId || null,
+    variantId: item.variantId || null,
+    itemType: item.itemType || (item.productId ? 'catalog' : 'inventory'),
     name: item.title || item.name,
     title: item.title || item.name,
     price: String(item.unitPriceInr ?? item.price ?? ''),
@@ -37,8 +40,12 @@ export function CartProvider({ children }) {
     try {
       const data = await getServerCart()
       setCart(mapServerItems(data?.items))
-    } catch {
-      /* keep current cart on transient errors */
+    } catch (err) {
+      if (err?.status === 401) {
+        logout()
+        setCart([])
+      }
+      /* keep current cart on other transient errors */
     } finally {
       setSyncing(false)
     }
@@ -49,15 +56,24 @@ export function CartProvider({ children }) {
   }, [refreshFromServer])
 
   const addToCart = useCallback(async (product) => {
-    const inventoryId = product.inventoryId || product.id
-    if (!inventoryId) return { error: 'Missing inventory id' }
-
     if (!isLoggedIn()) {
       return { error: 'LOGIN_REQUIRED' }
     }
 
+    const productId = product.productId || (product.itemType === 'catalog' ? product.id : null)
+    const inventoryId = product.inventoryId || (!productId ? product.id : null)
+
+    if (!productId && !inventoryId) {
+      return { error: 'Missing product or inventory id' }
+    }
+
     try {
-      const data = await apiAddCartItem(inventoryId)
+      const data = productId
+        ? await apiAddCartItem({
+            productId,
+            variantId: product.variantId || undefined,
+          })
+        : await apiAddCartItem({ inventoryId })
       setCart(mapServerItems(data?.items))
       return { ok: true }
     } catch (err) {

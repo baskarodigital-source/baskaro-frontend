@@ -7,7 +7,10 @@ import FormField from '../components/FormField.jsx'
 import MediaUpload from './MediaUpload.jsx'
 import SeoTab from './SeoTab.jsx'
 import VariantBuilder from './VariantBuilder.jsx'
+import ProductExtrasTab from './ProductExtrasTab.jsx'
 import AttributeMediaUpload from '../attributes/AttributeMediaUpload.jsx'
+import { loadColorVariantDraftsFromModel } from '../../../lib/colorVariants.js'
+import { DEFAULT_MODEL_CONDITION_GRADES } from '../../../lib/modelConditionGrades.js'
 import {
   clearProductFormErrors,
   getBrandSelectPlaceholder,
@@ -31,6 +34,10 @@ function createEmptyForm() {
     attributes: [],
     images: [],
     variants: [],
+    specifications: {},
+    conditionGrades: [...DEFAULT_MODEL_CONDITION_GRADES],
+    colorVariants: [],
+    offersDraft: [],
     seo: { ...initialSeo },
     isFeatured: false,
     isActive: true,
@@ -104,6 +111,15 @@ export default function ProductForm({
       attributes: Array.isArray(initialValue.attributes) ? initialValue.attributes : [],
       images: Array.isArray(initialValue.images) ? initialValue.images : [],
       variants: Array.isArray(initialValue.variants) ? initialValue.variants : [],
+      specifications:
+        initialValue.specifications && typeof initialValue.specifications === 'object'
+          ? { ...initialValue.specifications }
+          : {},
+      conditionGrades: Array.isArray(initialValue.conditionGrades)
+        ? initialValue.conditionGrades
+        : [...DEFAULT_MODEL_CONDITION_GRADES],
+      colorVariants: loadColorVariantDraftsFromModel(initialValue.colorVariants),
+      offersDraft: [],
       seo: {
         title: initialValue?.seo?.title || '',
         description: initialValue?.seo?.description || '',
@@ -358,6 +374,9 @@ export default function ProductForm({
       deviceId: form.deviceId,
       tags: String(form.tagsText || '').split(',').map((x) => x.trim()).filter(Boolean),
       attributes: Array.isArray(form.attributes) ? form.attributes : [],
+      specifications: form.specifications && typeof form.specifications === 'object' ? form.specifications : {},
+      conditionGrades: Array.isArray(form.conditionGrades) ? form.conditionGrades : [],
+      colorVariants: Array.isArray(form.colorVariants) ? form.colorVariants : [],
       images: Array.isArray(form.images) ? form.images : [],
       variants: variantRows.map((v) => ({
         ...v,
@@ -374,7 +393,7 @@ export default function ProductForm({
       isFeatured: Boolean(form.isFeatured),
       isActive: Boolean(form.isActive),
     }
-    onSubmit?.(payload)
+    onSubmit?.(payload, form.offersDraft)
   }
 
   const renderCategoryAttributesSection = () => {
@@ -513,16 +532,7 @@ export default function ProductForm({
             />
           </FormField>
 
-          <FormField label="Slug" htmlFor="product-slug" hint="Optional - auto-generated if empty">
-            <input
-              id="product-slug"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              placeholder="iphone-15-pro"
-              value={form.slug}
-              onChange={(e) => setProductFormField(setForm, 'slug', e.target.value)}
-            />
-          </FormField>
-          <FormField label="SKU" htmlFor="product-sku">
+          <FormField label="SKU" htmlFor="product-sku" className="md:col-span-2">
             <input
               id="product-sku"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -542,7 +552,7 @@ export default function ProductForm({
               onChange={(e) => setProductFormField(setForm, 'tagsText', e.target.value)}
             />
           </FormField>
-          <FormField label="Description" htmlFor="product-description" className="md:col-span-2">
+          <FormField label="Product description" htmlFor="product-description" className="md:col-span-2" hint="Shown on the product page — not the SEO meta description">
             <textarea
               id="product-description"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -598,9 +608,56 @@ export default function ProductForm({
       )
     }
 
+    if (tab === 'details') {
+      const selectedDevice = devices.find((d) => d.id === String(form.deviceId || ''))
+      return (
+        <ProductExtrasTab
+          categoryId={String(form.category || '')}
+          ribbonCategoryId={ribbonCategoryId}
+          deviceId={String(form.deviceId || '')}
+          deviceName={selectedDevice?.name || ''}
+          productId={refId(initialValue)}
+          specifications={form.specifications}
+          conditionGrades={form.conditionGrades}
+          colorVariants={form.colorVariants}
+          offersDraft={form.offersDraft}
+          onSpecificationsChange={(updater) =>
+            setForm((prev) => ({
+              ...prev,
+              specifications:
+                typeof updater === 'function' ? updater(prev.specifications) : updater,
+            }))
+          }
+          onConditionGradesChange={(updater) =>
+            setForm((prev) => ({
+              ...prev,
+              conditionGrades:
+                typeof updater === 'function' ? updater(prev.conditionGrades) : updater,
+            }))
+          }
+          onColorVariantsChange={(updater) =>
+            setForm((prev) => ({
+              ...prev,
+              colorVariants:
+                typeof updater === 'function' ? updater(prev.colorVariants) : updater,
+            }))
+          }
+          onOffersDraftChange={(updater) =>
+            setForm((prev) => ({
+              ...prev,
+              offersDraft: typeof updater === 'function' ? updater(prev.offersDraft) : updater,
+            }))
+          }
+          disabled={saving}
+        />
+      )
+    }
+
     if (tab === 'seo') {
       return (
         <SeoTab
+          slug={form.slug}
+          onSlugChange={(slug) => setProductFormField(setForm, 'slug', slug)}
           value={form.seo}
           onChange={(seo) => setProductFormField(setForm, 'seo', seo)}
         />
@@ -632,14 +689,14 @@ export default function ProductForm({
   return (
     <form onSubmit={submit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-center gap-2 text-sm">
-        {['general', 'media', 'variants', 'seo'].map((name) => (
+        {['general', 'media', 'variants', 'details', 'seo'].map((name) => (
           <button
             key={name}
             type="button"
             className={`rounded-md px-3 py-1 capitalize ${tab === name ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'}`}
             onClick={() => setTab(name)}
           >
-            {name}
+            {name === 'seo' ? 'SEO' : name}
           </button>
         ))}
       </div>

@@ -41,6 +41,8 @@ export function mapCatalogProductToCard(product) {
 
   return {
     id: String(id),
+    productId: String(id),
+    itemType: 'catalog',
     image: image || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=400&auto=format&fit=crop',
     title,
     price: formatCatalogInr(price),
@@ -48,7 +50,6 @@ export function mapCatalogProductToCard(product) {
     discount,
     brand: brandName,
     tag: Array.isArray(product?.tags) ? product.tags : [],
-    viewPath: `/shop/${encodeURIComponent(String(id))}`,
     stock: Number(variant.stock) || 0,
   }
 }

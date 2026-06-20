@@ -64,6 +64,8 @@ export function ProductCard({
   tag,
   brand = 'BASKARO',
   viewPath = '',
+  productId = '',
+  itemType = '',
   ctaLabel = 'View Details',
   onCtaClick,
   className = '',
@@ -75,7 +77,8 @@ export function ProductCard({
   const wishlistKey = id || title
   const wishlisted = wishlistKey ? isWishlisted(wishlistKey) : false
   const cartInventoryId = inventoryId || id
-  const canAddToCart = isMongoObjectId(cartInventoryId)
+  const isCatalogItem = itemType === 'catalog' || Boolean(productId)
+  const canAddToCart = isCatalogItem ? Boolean(productId || id) : isMongoObjectId(cartInventoryId)
 
   const priceForWishlist = String(price || '')
     .replace(/₹/g, '')
@@ -180,7 +183,9 @@ export function ProductCard({
             onCtaClick ??
             (() => {
               if (viewPath) navigate(viewPath)
-              else if (id) navigate(`/product/${id}`)
+              else if (id) {
+                navigate(`/product/${id}`, isCatalogItem ? { state: { itemType: 'catalog' } } : undefined)
+              }
             })
           }
           className="flex-1 flex min-h-[44px] items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50/80 px-2 py-2.5 text-[13px] font-bold text-slate-600 transition-all duration-300 hover:border-slate-900 hover:bg-slate-900 hover:text-white"
@@ -201,13 +206,23 @@ export function ProductCard({
               return
             }
             setIsAdding(true)
-            const result = await addToCart({
-              id: cartInventoryId,
-              inventoryId: cartInventoryId,
-              name: title,
-              price: price,
-              img: image,
-            })
+            const result = await addToCart(
+              isCatalogItem
+                ? {
+                    productId: productId || id,
+                    itemType: 'catalog',
+                    name: title,
+                    price: price,
+                    img: image,
+                  }
+                : {
+                    id: cartInventoryId,
+                    inventoryId: cartInventoryId,
+                    name: title,
+                    price: price,
+                    img: image,
+                  },
+            )
             setIsAdding(false)
             if (result?.error === 'LOGIN_REQUIRED') {
               appAlert('Please log in to reserve and add pre-owned devices to your cart.', {

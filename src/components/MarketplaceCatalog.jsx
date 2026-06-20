@@ -105,7 +105,7 @@ export function MarketplaceCatalog({ showIntro = true }) {
       if (!model?.id) return
       const slug = modelPathSlug(model.name, model.slug)
       navigate(`/product/${encodeURIComponent(slug || model.id)}`, {
-        state: { modelId: model.id, brandName: selectedBrand?.name || '' },
+        state: { itemType: 'model', modelId: model.id, brandName: selectedBrand?.name || '' },
       })
     },
     [navigate, selectedBrand?.name],

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { appAlert, appConfirm } from '../../lib/appDialog.js'
-import { postImportCategoriesFromRibbon, getProductById } from '../../lib/api/baskaroApi.js'
+import { postImportCategoriesFromRibbon, getProductById, postOffer, patchOffer, deleteOffer } from '../../lib/api/baskaroApi.js'
 import CategoryForm from './categories/CategoryForm.jsx'
 import CategoryTree from './categories/CategoryTree.jsx'
 import { useCategories } from './categories/useCategories.js'
@@ -205,13 +205,39 @@ export default function CatalogBuilderView({
     }
   }
 
-  const saveProduct = async (payload) => {
+  const saveProduct = async (payload, offersDraft = []) => {
     try {
+      let productId = normalizeId(productDraft)
       if (productDraft?._id || productDraft?.id) {
-        await productsHook.updateProduct(normalizeId(productDraft), payload)
+        const updated = await productsHook.updateProduct(normalizeId(productDraft), payload)
+        productId = normalizeId(updated) || productId
       } else {
-        await productsHook.createProduct(payload)
+        const created = await productsHook.createProduct(payload)
+        productId = normalizeId(created) || productId
       }
+
+      if (productId && Array.isArray(offersDraft)) {
+        await Promise.all(
+          offersDraft.map(async (o) => {
+            const title = String(o?.title || '').trim()
+            const desc = String(o?.desc || '').trim()
+            const code = String(o?.code || '').trim()
+            const sortOrder = Number(o?.sortOrder) || 0
+            const isActive = o?.isActive !== false
+
+            if (o?._deleted) {
+              if (o?._id) await deleteOffer(o._id)
+              return
+            }
+            if (!title || !desc) return
+
+            const body = { title, desc, code, sortOrder, isActive, productId }
+            if (o?._id) await patchOffer(o._id, body)
+            else await postOffer(body)
+          }),
+        )
+      }
+
       setProductDraft(null)
     } catch (e) {
       appAlert(e?.message || 'Product save failed')

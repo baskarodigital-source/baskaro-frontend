@@ -123,6 +123,26 @@ export async function getProductById(id) {
   return unwrap(await apiRequest(`/api/products/${encodeURIComponent(id)}`))
 }
 
+/** Load catalog product or phone model by id without probing the wrong API first. */
+export async function resolveProductDetails(id, { kind = 'auto' } = {}) {
+  const preferCatalog = kind === 'catalog' || kind === 'auto'
+  const preferModel = kind === 'model' || kind === 'auto'
+
+  if (preferCatalog && !preferModel) {
+    return { kind: 'catalog', data: await getProductById(id) }
+  }
+  if (preferModel && !preferCatalog) {
+    return { kind: 'model', data: await getMobileModel(id) }
+  }
+
+  try {
+    return { kind: 'catalog', data: await getProductById(id) }
+  } catch (err) {
+    if (err?.status !== 404) throw err
+    return { kind: 'model', data: await getMobileModel(id) }
+  }
+}
+
 export async function postProduct(body) {
   return unwrap(await apiRequest('/api/products', { method: 'POST', body, auth: true }))
 }
@@ -466,8 +486,17 @@ export async function getServerCart() {
   return unwrap(await apiRequest('/api/cart', { auth: true }))
 }
 
-export async function addCartItem(inventoryId) {
-  return unwrap(await apiRequest('/api/cart/items', { method: 'POST', body: { inventoryId }, auth: true }))
+export async function addCartItem(payload) {
+  let body
+  if (typeof payload === 'string' || typeof payload === 'number') {
+    body = { inventoryId: String(payload) }
+  } else if (payload?.productId) {
+    body = { productId: String(payload.productId) }
+    if (payload.variantId) body.variantId = String(payload.variantId)
+  } else {
+    body = payload
+  }
+  return unwrap(await apiRequest('/api/cart/items', { method: 'POST', body, auth: true }))
 }
 
 export async function removeCartItem(inventoryId) {
@@ -671,6 +700,8 @@ export async function uploadImageToCloudinary(body) {
 export function resolveHomeServiceImageUrl(raw, opts) {
   const t = String(raw ?? '').trim()
   if (!t) return ''
+  // Legacy third-party URLs with broken TLS or hotlink blocks — use local fallback instead.
+  if (/erepaircafe\.com|cashify\.in/i.test(t)) return ''
   let url = t
   if (/^https?:\/\//i.test(t) || t.startsWith('data:')) {
     url = t

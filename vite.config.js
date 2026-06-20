@@ -8,8 +8,9 @@ import tailwindcss from '@tailwindcss/vite'
 // If the browser shows 502 on /api/*, the backend is not running or the proxy port is wrong.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const apiUrl = (env.VITE_API_URL || '').trim().replace(/\/$/, '')
   const apiPort = env.VITE_API_PORT || '4000'
-  const apiTarget = `http://127.0.0.1:${apiPort}`
+  const apiTarget = apiUrl || `http://127.0.0.1:${apiPort}`
 
   return {
     plugins: [react(), tailwindcss()],
